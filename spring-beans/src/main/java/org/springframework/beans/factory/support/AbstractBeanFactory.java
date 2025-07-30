@@ -1832,8 +1832,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	}
 
 	/**
-	 * Get the object for the given bean instance, either the bean
-	 * instance itself or its created object in case of a FactoryBean.
+	 * 获取给定 bean 实例的对象，可以是 bean 实例本身，也可以是其创建的对象（如果是 FactoryBean）。
 	 * @param beanInstance the shared bean instance
 	 * @param name the name that may include factory dereference prefix
 	 * @param beanName the canonical bean name
