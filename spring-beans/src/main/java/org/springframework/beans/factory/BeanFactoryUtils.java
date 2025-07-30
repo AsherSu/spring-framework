@@ -66,11 +66,9 @@ public abstract class BeanFactoryUtils {
 
 
 	/**
-	 * Return whether the given name is a factory dereference
-	 * (beginning with the factory dereference prefix).
-	 * @param name the name of the bean
-	 * @return whether the given name is a factory dereference
-	 * @see BeanFactory#FACTORY_BEAN_PREFIX
+	 * name是否为工厂引用（以工厂引用前缀&开头）。
+	 * @param name 要检查的 bean 名称
+	 * @return 如果给定名称为工厂引用，则为 true
 	 */
 	public static boolean isFactoryDereference(@Nullable String name) {
 		return (name != null && !name.isEmpty() && name.charAt(0) == BeanFactory.FACTORY_BEAN_PREFIX_CHAR);

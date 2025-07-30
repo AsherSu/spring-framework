@@ -42,7 +42,7 @@ import org.springframework.core.ResolvableType;
  */
 public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanRegistry {
 
-	/** Cache of singleton objects created by FactoryBeans: FactoryBean name to object. */
+	/** FactoryBeans 创建的单例对象的缓存：FactoryBean 名称到对象。 */
 	private final Map<String, Object> factoryBeanObjectCache = new ConcurrentHashMap<>(16);
 
 

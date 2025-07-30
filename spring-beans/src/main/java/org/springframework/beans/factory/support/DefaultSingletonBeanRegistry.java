@@ -85,7 +85,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	/** 单例对象的缓存：Bean 名称到 Bean 实例。 */
 	private final Map<String, Object> singletonObjects = new ConcurrentHashMap<>(256);
 
-	/** Creation-time registry of singleton factories: bean name to ObjectFactory. */
+	/** 单例工厂的创建时注册表：Bean 名称为 ObjectFactory。*/
 	private final Map<String, ObjectFactory<?>> singletonFactories = new ConcurrentHashMap<>(16);
 
 	/** Custom callbacks for singleton creation/registration. */
@@ -202,7 +202,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * 检查已经实例化的单例，还允许早期引用当前正在创建的单例（解决循环引用问题）。
 	 * @param beanName 命名要查找的 bean 的名称
 	 * @param allowEarlyReference 是否应该创建早期引用
-	 * @return 已注册的单例对象，如果未找到，则为 {@code null}
+	 * @return 已注册的单例对象 或者 早期单例bean，如果未找到，则为 {@code null}
 	 */
 	protected @Nullable Object getSingleton(String beanName, boolean allowEarlyReference) {
 		// 在获取单例时，先尝试直接从缓存（singletonObjects）中读取已有实例，
@@ -220,6 +220,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					if (singletonObject == null) {
 						singletonObject = this.earlySingletonObjects.get(beanName);
 						if (singletonObject == null) {
+							// todo 从单例工厂中获取单例
 							ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
 							if (singletonFactory != null) {
 								singletonObject = singletonFactory.getObject();
