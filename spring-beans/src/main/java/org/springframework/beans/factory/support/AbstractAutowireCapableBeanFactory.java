@@ -541,15 +541,14 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
-	 * Actually create the specified bean. Pre-creation processing has already happened
-	 * at this point, for example, checking {@code postProcessBeforeInstantiation} callbacks.
-	 * <p>Differentiates between default bean instantiation, use of a
-	 * factory method, and autowiring a constructor.
-	 * @param beanName the name of the bean
-	 * @param mbd the merged bean definition for the bean
-	 * @param args explicit arguments to use for constructor or factory method invocation
-	 * @return a new instance of the bean
-	 * @throws BeanCreationException if the bean could not be created
+	 * 实际创建指定的 bean。在此阶段，预创建处理已经完成，
+	 * 例如检查 {@code postProcessBeforeInstantiation} 回调。
+	 * <p>区分默认的 bean 实例化、使用工厂方法以及构造函数自动装配。
+	 * @param beanName bean 的名称
+	 * @param mbd 合并后的 bean 定义
+	 * @param args 用于构造函数或工厂方法调用的显式参数
+	 * @return 新创建的 bean 实例
+	 * @throws BeanCreationException 如果无法创建 bean
 	 * @see #instantiateBean
 	 * @see #instantiateUsingFactoryMethod
 	 * @see #autowireConstructor
