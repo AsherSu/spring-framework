@@ -166,7 +166,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	/** Names of beans that have already been created at least once. */
 	private final Set<String> alreadyCreated = ConcurrentHashMap.newKeySet(256);
 
-	/** Names of beans that are currently in creation. */
+	/** 当前正在创建的 Bean 的名称。 */
 	private final ThreadLocal<Object> prototypesCurrentlyInCreation =
 			new NamedThreadLocal<>("Prototype beans currently in creation");
 
@@ -232,6 +232,25 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @return bean 的实例
 	 * @throws BeansException，如果无法创建 bean
 	 */
+	//1. 缓存单例分支
+	//   - 条件：`sharedInstance != null && args == null`
+	//   - 返回：读取已缓存的单例或早期引用并调用 `getObjectForBeanInstance`
+	//
+	//2. 原型循环检测分支
+	//   - 条件：`isPrototypeCurrentlyInCreation(beanName)`
+	//   - 返回：抛出 `BeanCurrentlyInCreationException`
+	//
+	//3. 委托父工厂分支
+	//   - 条件：`parentBeanFactory != null && !containsBeanDefinition(beanName)`
+	//   - 返回：调用父工厂的 `doGetBean` 或 `getBean`
+	//
+	//4. 本地创建分支
+	//   - 标记创建：`!typeCheckOnly` 时执行 `markBeanAsCreated`
+	//   - 加载合并定义：`getMergedLocalBeanDefinition`
+	//   - 根据作用域创建：
+	//     - 单例（`mbd.isSingleton()`）
+	//     - 原型（`mbd.isPrototype()`）
+	//     - 自定义作用域（其它 `scope`）
 	@SuppressWarnings("unchecked")
 	protected <T> T doGetBean(
 			String name, @Nullable Class<T> requiredType, @Nullable Object @Nullable [] args, boolean typeCheckOnly)
@@ -243,7 +262,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 		// 提前检查 单例缓存 中是否有手动注册的单例。 返回单例bean或者早期bean
 		Object sharedInstance = getSingleton(beanName);
-		//表示在单例缓存里已经有一个实例 同时 调用方没有提供额外的构造参数，则复用
+
+		// 在单例缓存里已经有一个实例 同时 调用方没有提供额外的构造参数，则复用
 		if (sharedInstance != null && args == null) {
 			if (logger.isTraceEnabled()) {
 				if (isSingletonCurrentlyInCreation(beanName)) {
@@ -257,15 +277,21 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			beanInstance = getObjectForBeanInstance(sharedInstance, requiredType, name, beanName, null);
 		}
 
+		//
 		else {
-			// Fail if we're already creating this bean instance:
-			// We're assumably within a circular reference.
+			// 当创建原型（prototype）作用域的 Bean 时，Spring 在进入创建流程前会调用 beforePrototypeCreation(beanName)，
+			// 将当前正在创建的 Bean 名称记录到线程级别的 prototypesCurrentlyInCreation 中；创建完成后再通过
+			// afterPrototypeCreation(beanName) 将其移除。
+			//如果在创建某个原型 Bean（A） 的过程中，意外又去创建同名或关联的原型 Bean（A）——也就是重新进入创建流程——此时
+			// isPrototypeCurrentlyInCreation(beanName) 会返回 true，说明出现了自引用或循环依赖，
+			// 于是直接抛出 BeanCurrentlyInCreationException。
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
 			}
 
 			// Check if bean definition exists in this factory.
 			BeanFactory parentBeanFactory = getParentBeanFactory();
+			// 条件：有父工厂 且 当前工厂没有该 Bean 定义
 			if (parentBeanFactory != null && !containsBeanDefinition(beanName)) {
 				// Not found -> check parent.
 				String nameToLookup = originalBeanName(name);
@@ -1171,9 +1197,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	}
 
 	/**
-	 * Return whether the specified prototype bean is currently in creation
-	 * (within the current thread).
-	 * @param beanName the name of the bean
+	 * 返回指定的原型 bean 当前是否正在创建中（在当前线程内）。
+	 * @param beanName bean 的名称
 	 */
 	protected boolean isPrototypeCurrentlyInCreation(String beanName) {
 		Object curVal = this.prototypesCurrentlyInCreation.get();
@@ -1872,6 +1897,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			return beanInstance;
 		}
 
+		//todo
 		Object object = null;
 		if (mbd != null) {
 			mbd.isFactoryBean = true;
