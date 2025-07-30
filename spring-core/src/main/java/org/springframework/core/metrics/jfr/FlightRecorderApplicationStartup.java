@@ -36,6 +36,8 @@ import org.springframework.core.metrics.StartupStep;
  * @author Brian Clozel
  * @since 5.3
  */
+
+//todo 函数式回调
 public class FlightRecorderApplicationStartup implements ApplicationStartup {
 
 	private final AtomicLong currentSequenceId = new AtomicLong();
