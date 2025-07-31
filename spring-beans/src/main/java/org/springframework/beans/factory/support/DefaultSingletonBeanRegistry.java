@@ -103,19 +103,19 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	/** 排除某些 Bean 进行循环依赖检查 */
 	private final Set<String> inCreationCheckExclusions = ConcurrentHashMap.newKeySet(16);
 
-	/** 用于宽松创建跟踪的特定锁。 */
+	/** 用于 宽松创建跟踪（lct） 的特定锁。 */
 	private final Lock lenientCreationLock = new ReentrantLock();
 
-	/** Specific lock condition for lenient creation tracking. */
+	/** lct是否创建完成的标志锁 */
 	private final Condition lenientCreationFinished = this.lenientCreationLock.newCondition();
 
-	/** Names of beans that are currently in lenient creation. */
+	/** 当前处于宽松创建模式的 Bean 名称集合。 */
 	private final Set<String> singletonsInLenientCreation = new HashSet<>();
 
-	/** Map from one creation thread waiting on a lenient creation thread. */
+	/** 映射：等待线程 映射 创建bean的线程*/
 	private final Map<Thread, Thread> lenientWaitingThreads = new HashMap<>();
 
-	/** Map from bean name to actual creation thread for currently created beans. */
+	/** 当前正在创建的 bean 实例与 其创建线程 的映射关系。 */
 	private final Map<String, Thread> currentCreationThreads = new ConcurrentHashMap<>();
 
 	/** 标志当前spring环境是否正在执行 destroySingletons 操作，即销毁环境。 */
@@ -268,7 +268,6 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 						// 线程安全的暴露仍然有保证，但在触发当前 bean 的依赖项创建时可能会有冲突风险。
 						this.lenientCreationLock.lock();
 						try {
-							// 如果启用了 info 级别日志，则记录相关信息
 							if (logger.isInfoEnabled()) {
 								Set<String> lockedBeans = new HashSet<>(this.singletonsCurrentlyInCreation);
 								lockedBeans.removeAll(this.singletonsInLenientCreation);
@@ -313,7 +312,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					beforeSingletonCreation(beanName);
 				}
 				catch (BeanCurrentlyInCreationException ex) {
-					// 如果捕获到 BeanCurrentlyInCreationException，说明该 bean 正在创建中
+					// 如果捕获到 BeanCurrentlyInCreationException，说明该 bean 正在创建中，即第二次创建
 					this.lenientCreationLock.lock();
 					try {
 						// 循环等待直到单例对象被创建或满足退出条件
@@ -364,9 +363,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					// 尝试延迟获取锁以等待特定 bean 创建完成
 					this.singletonLock.lock();
 					locked = true;
-					// 锁创建的单例对象应该已经在这期间出现。
+
+					// 锁创建的单例对象可能已经在这期间出现。
 					singletonObject = this.singletonObjects.get(beanName);
-					// 如果已经获取到单例对象，则直接返回
 					if (singletonObject != null) {
 						return singletonObject;
 					}
@@ -376,14 +375,13 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 
 				// 标记是否是新创建的单例
 				boolean newSingleton = false;
-				// 确定是否需要记录被抑制的异常
+				// 初始化被抑制的异常
 				boolean recordSuppressedExceptions = (locked && this.suppressedExceptions == null);
-				// 如果需要记录被抑制的异常，则初始化集合
 				if (recordSuppressedExceptions) {
 					this.suppressedExceptions = new LinkedHashSet<>();
 				}
+
 				try {
-					// 宽松创建的单例对象可能已经在这期间出现。
 					singletonObject = this.singletonObjects.get(beanName);
 					// 如果仍未获取到单例对象，则通过工厂创建
 					if (singletonObject == null) {
@@ -581,8 +579,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	}
 
 	/**
-	 * Callback after singleton creation.
-	 * <p>The default implementation marks the singleton as not in creation anymore.
+	 * 单例创建完成后的回调方法
+	 * <p>T默认实现将该单例bean标记为不再处于创建状态
 	 * @param beanName the name of the singleton that has been created
 	 * @see #isSingletonCurrentlyInCreation
 	 */

@@ -204,19 +204,20 @@ public abstract class ClassUtils {
 	}
 
 	/**
-	 * Return the default ClassLoader to use: typically the thread context
-	 * ClassLoader, if available; the ClassLoader that loaded the ClassUtils
-	 * class will be used as fallback.
-	 * <p>Call this method if you intend to use the thread context ClassLoader
-	 * in a scenario where you clearly prefer a non-null ClassLoader reference:
-	 * for example, for class path resource loading (but not necessarily for
-	 * {@code Class.forName}, which accepts a {@code null} ClassLoader
-	 * reference as well).
-	 * @return the default ClassLoader (only {@code null} if even the system
-	 * ClassLoader isn't accessible)
+	 * 返回要使用的默认类加载器：通常是线程上下文类加载器（如果可用）；
+	 * 如果不可用，则使用加载 ClassUtils 类的类加载器作为备选。
+	 *
+	 * <p>在你明确希望获得非空类加载器引用的场景中调用此方法：
+	 * 例如，用于类路径资源加载（但对于 {@code Class.forName} 来说不是必须的，
+	 * 因为它也接受 {@code null} 类加载器引用）。
+	 *
+	 * @return 默认的类加载器（只有在连系统类加载器都无法访问时才返回 {@code null}）
 	 * @see Thread#getContextClassLoader()
 	 * @see ClassLoader#getSystemClassLoader()
 	 */
+	// 首选：线程上下文类加载器（当前线程的类加载器）
+	// 备选：加载ClassUtils这个工具类的类加载器
+	// 最后：系统类加载器
 	public static @Nullable ClassLoader getDefaultClassLoader() {
 		ClassLoader cl = null;
 		try {
