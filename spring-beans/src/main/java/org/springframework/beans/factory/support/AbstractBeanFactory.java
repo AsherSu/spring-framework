@@ -222,7 +222,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	}
 
 	/**
-	 * 返回指定 bean 的实例，该实例可以是共享的，也可以是独立的。
+	 * 返回指定 bean 的实例，该���例可以是共享的，也可以是独立的。
 	 * @param name 命名要检索的 bean 的名称
 	 * @param requiredType required键入要检索的 Bean 的所需类型
 	 * @param args 使用显式参数创建 bean 实例时要使用的参数
@@ -333,7 +333,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				String[] dependsOn = mbd.getDependsOn();
 				if (dependsOn != null) {
 					for (String dep : dependsOn) {
-						// 检测循环依赖，如果 dep->beanName 则存在循环依赖
+						// 检测循环���赖，如果 dep->beanName 则存在循环依赖
 						if (isDependent(beanName, dep)) {
 							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 									"Circular depends-on relationship between '" + beanName + "' and '" + dep + "'");
@@ -436,15 +436,50 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		return adaptBeanInstance(name, beanInstance, requiredType);
 	}
 
+	/**
+	 * 适配Bean实例到所需的类型
+	 * 这是Spring类型转换系统的一个重要组成部分，确保获取的Bean实例符合调用者期望的类型
+	 *
+	 * 主要功能：
+	 * 1. 检查Bean实例是否已经是所需类型
+	 * 2. 如果类型不匹配，尝试使用类型转换器进行转换
+	 * 3. 处理转换失败的情况，提供清晰的错误信息
+	 *
+	 * 常见使用场景：
+	 * - 当通过@Autowired注入时需要特定类型
+	 * - 通过getBean(String, Class)方法获取特定类型的Bean
+	 * - FactoryBean返回的对象需要转换为目标类型
+	 * - 代理对象需要转换为目标接口类型
+	 *
+	 * @param name Bean的名称，用于错误信息中标识具体的Bean
+	 * @param bean 实际的Bean实例，可能需要进行类型转换
+	 * @param requiredType 调用者期望的目标类型，如果为null则直接返回原始Bean
+	 * @return 适配后的Bean实例，保证是requiredType类型或其子类型
+	 * @throws BeanNotOfRequiredTypeException 当Bean无法转换为所需类型时抛出
+	 */
 	@SuppressWarnings("unchecked")
 	<T> T adaptBeanInstance(String name, Object bean, @Nullable Class<?> requiredType) {
-		// Check if required type matches the type of the actual bean instance.
+		// 第一步：类型兼容性检查
+		// 如果没有指定所需类型，或者Bean实例已经是所需类型的实例，则直接返回
+		// isInstance()方法会检查继承关系和接口实现关系
 		if (requiredType != null && !requiredType.isInstance(bean)) {
 			try {
+				// 第二步：尝试类型转换
+				// 使用Spring的类型转换系统尝试将Bean转换为所需类型
+				// TypeConverter支持多种转换方式：
+				// - 基本类型转换（如String到Integer）
+				// - 集合类型转换（如List到Set）
+				// - 自定义PropertyEditor转换
+				// - ConversionService转换
 				Object convertedBean = getTypeConverter().convertIfNecessary(bean, requiredType);
+
+				// 第三步：转换结果验证
+				// 如果转换器返回null，说明无法进行转换
 				if (convertedBean == null) {
 					throw new BeanNotOfRequiredTypeException(name, requiredType, bean.getClass());
 				}
+
+				// 转换成功，返回转换后的对象
 				return (T) convertedBean;
 			}
 			catch (TypeMismatchException ex) {
@@ -455,6 +490,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				throw new BeanNotOfRequiredTypeException(name, requiredType, bean.getClass());
 			}
 		}
+
+		// Bean已经是所需类型，或者没有指定所需类型，直接返回原始Bean
+		// 这里的强制类型转换是安全的，因为上面的检查已经确保了类型兼容性
 		return (T) bean;
 	}
 
@@ -1599,7 +1637,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * 然后把这个类对象保存起来，下次就不用重复转换了。
 	 * @param mbd 合并后的 bean 定义，里面包含了类名信息
 	 * @param beanName bean 的名字，出错时用来提示是哪个 bean
-	 * @param typesToMatch 需要匹配的类型列表（主要用于内部类型检查，表示这个返回的 Class 不会直接给应用程序使用）
+	 * @param typesToMatch ��要匹配的类型列表（主要用于内部类型检查，表示这个返回的 Class 不会直接给应用程序使用）
 	 * @return 解析出来的 Class 对象，如果解析不了就返回 null
 	 * @throws CannotLoadBeanClassException 如果找不到这个类或加载失败就抛异常
 	 */
@@ -1637,14 +1675,18 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @return 解析出的Class对象，如果无法解析则返回null
 	 * @throws ClassNotFoundException 当找不到指定的类时抛出
 	 */
+	// 使用typesToMatch的场景:
+	// 类型检查：isTypeMatch() 方法调用时
+	// 依赖注入验证：检查候选 Bean 是否匹配目标类型
+	// Bean 查找：按类型查找 Bean 时的预检查
+	// 在这些场景中，只需要知道 Bean 的类型信息，无需创建实际的实例，
 	private @Nullable Class<?> doResolveBeanClass(RootBeanDefinition mbd, Class<?>... typesToMatch)
 			throws ClassNotFoundException {
 
 		// 获取Bean工厂的默认类加载器
 		ClassLoader beanClassLoader = getBeanClassLoader();
-		// 动态类加载器，初始时与默认类加载器相同
 		ClassLoader dynamicLoader = beanClassLoader;
-		// 标记是否需要重新解析（避免缓存到Bean定义中）
+		// true: 表示后续需要重新解析类，不将解析结果缓存到 RootBeanDefinition 中
 		boolean freshResolve = false;
 
 		// 如果提供了类型匹配参数，说明这是用于类型检查而非实际创建Bean实例
@@ -1656,9 +1698,11 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				// 使用临时类加载器进行解析
 				dynamicLoader = tempClassLoader;
 				// 标记为重新解析，避免将结果缓存到Bean定义中
+				// 因为通过临时类加载器解析的类可能与最终使用的类不同
 				freshResolve = true;
 				// 如果临时类加载器是装饰类加载器，排除需要匹配的类型
 				// 这样可以避免在类型检查时产生不必要的类加载
+				// DecoratingClassLoader允许排除特定的类，让它们由父类加载器处理
 				if (tempClassLoader instanceof DecoratingClassLoader dcl) {
 					for (Class<?> typeToMatch : typesToMatch) {
 						dcl.excludeClass(typeToMatch.getName());
@@ -1682,28 +1726,24 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					return clazz;
 				}
 				else if (evaluated instanceof String name) {
-					// 如果表达式返回字符串，更新类名并标记为重新解析
+					// 如果表达式返回字符串，则不缓存，表达式结果可能发生变化
 					className = name;
 					freshResolve = true;
 				}
 				else {
-					// 表达式结果既不是Class也不是String，抛出异常
 					throw new IllegalStateException("Invalid class name expression result: " + evaluated);
 				}
 			}
 
 			// 如果需要重新解析（使用了临时类加载器或动态表达式）
 			if (freshResolve) {
-				// 当使用临时类加载器解析时，提前退出以避免
-				// 将解析的Class存储在Bean定义中（因为这是临时的）
+				// 当使用临时类加载器解析时，提前退出以避免将解析的Class存储在Bean定义中（因为这是临时的）
 				if (dynamicLoader != null) {
 					try {
 						// 尝试使用动态类加载器加载类
 						return dynamicLoader.loadClass(className);
 					}
 					catch (ClassNotFoundException ex) {
-						// 如果加载失败，记录跟踪日志但不抛出异常
-						// 继续尝试其他方式加载
 						if (logger.isTraceEnabled()) {
 							logger.trace("Could not load class [" + className + "] from " + dynamicLoader + ": " + ex);
 						}
@@ -1729,17 +1769,28 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @see #setBeanExpressionResolver
 	 */
 	protected @Nullable Object evaluateBeanDefinitionString(@Nullable String value, @Nullable BeanDefinition beanDefinition) {
+		// 如果没有配置表达式解析器，则直接返回原始值
+		// 表达式解析器通常在ApplicationContext初始化时设置
 		if (this.beanExpressionResolver == null) {
 			return value;
 		}
 
-		Scope scope = null;
+		// 构建表达式求值的上下文环境
+			Scope scope = null;
 		if (beanDefinition != null) {
+			// 从Bean定义中获取作用域名称（如singleton、prototype、session等）
 			String scopeName = beanDefinition.getScope();
 			if (scopeName != null) {
+				// 根据作用域名称获取对应的Scope实例
+				// 这个Scope对象可以提供作用域相关的���量和方法给表达式使用
 				scope = getRegisteredScope(scopeName);
 			}
 		}
+
+		// 使用表达式解析器对字符串进行求值
+		// BeanExpressionContext包含了求值所需的上下文信息：
+		// - this: 当前的BeanFactory实例，表达式可以通过它访问其他Bean
+		// - scope: 作用域对象，提供作用域相关的上下文
 		return this.beanExpressionResolver.evaluate(value, new BeanExpressionContext(this, scope));
 	}
 
@@ -1917,7 +1968,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @param name 命名可能包含工厂取消引用前缀的名称 factorybean 包含&为前缀
 	 * @param beanName 规范的 bean 名称
 	 * @param mbd 合并的 bean 定义
-	 * @return 要为 bean 公开的对象
+	 * @return 要为 bean 公开的���象
 	 */
 	protected Object getObjectForBeanInstance(Object beanInstance, @Nullable Class<?> requiredType,
 			String name, String beanName, @Nullable RootBeanDefinition mbd) {
