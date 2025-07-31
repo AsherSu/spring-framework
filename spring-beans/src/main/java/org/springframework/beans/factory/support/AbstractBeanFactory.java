@@ -364,6 +364,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 				// 开始创建 Bean 实例
 				if (mbd.isSingleton()) {
+					// 控制创建bean的线程安全
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
 							// 创建bean的核心方法
