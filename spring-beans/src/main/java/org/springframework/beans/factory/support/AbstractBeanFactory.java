@@ -1964,45 +1964,43 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 	/**
 	 * 获取给定 bean 实例的对象，可以是 bean 实例本身，也可以是其创建的对象（如果是 FactoryBean）。
+	 *
 	 * @param beanInstance 共享 Bean 实例
 	 * @param requiredType 期望的 bean 类型（如果有）
-	 * @param name 命名可能包含工厂取消引用前缀的名称 factorybean 包含&为前缀
-	 * @param beanName 规范的 bean 名称
-	 * @param mbd 合并的 bean 定义
+	 * @param name 命名可能包含工厂取消引用前缀的名称 factoryBean 包含&为前缀
+	 * @param beanName 规范的 beanName
+	 * @param mbd
 	 * @return 要为 bean 公开的���象
 	 */
 	protected Object getObjectForBeanInstance(Object beanInstance, @Nullable Class<?> requiredType,
 			String name, String beanName, @Nullable RootBeanDefinition mbd) {
+		// 1. name 带 & 前缀（isFactoryDereference(name) 为 true），直接返回 FactoryBean 本身。
+		// 2. name 不带 &，且 beanInstance 不是 FactoryBean，直接返回普通 Bean 实例。
+		// 3. name 不带 &，但 beanInstance 是 FactoryBean，此时要调用 factoryBean.getObject()，返回该工厂创建的对象
 
-		//1. name 带 & 前缀（isFactoryDereference(name) 为 true），直接返回 FactoryBean 本身。
-		//2. name 不带 &，且 beanInstance 不是 FactoryBean，直接返回普通 Bean 实例。
-		//3. name 不带 &，但 beanInstance 是 FactoryBean，此时要调用 factoryBean.getObject()，返回该工厂创建的对象
-
-
-		// 如果 bean 是 FactoryBean，返回工厂引用bean。
+		// name 为 & 开头，说明本次调用需要的是 factoryBean，。
 		if (BeanFactoryUtils.isFactoryDereference(name)) {
 			//首先判断是否是 NullBean 占位符，若是则直接返回它。
-			//然后检查实例是否实现了 FactoryBean 接口，若不是，则抛出 BeanIsNotAFactoryException。
-			//如果有合并后的 RootBeanDefinition（即 mbd 不为 null），则将其标记为工厂 Bean（mbd.isFactoryBean = true）。
-			//最后返回原始的工厂 Bean 实例。
 			if (beanInstance instanceof NullBean) {
 				return beanInstance;
 			}
+			//检查实例是否实现了 FactoryBean 接口，若不是，则抛出 BeanIsNotAFactoryException。
 			if (!(beanInstance instanceof FactoryBean)) {
 				throw new BeanIsNotAFactoryException(beanName, beanInstance.getClass());
 			}
+			//如果有合并后的 RootBeanDefinition（即 mbd 不为 null），则将其标记为工厂 Bean（mbd.isFactoryBean = true）。
 			if (mbd != null) {
 				mbd.isFactoryBean = true;
 			}
 			return beanInstance;
 		}
 
-		// 不是factoryBean引用，直接返回bean实例。
+		// sharedBeanInstance 不是 FactoryBean 实例，说明是bean，直接返回它。
 		if (!(beanInstance instanceof FactoryBean<?> factoryBean)) {
 			return beanInstance;
 		}
 
-		//todo
+		// 执行到这，说明该sharedBeanInstance一定是factoryBean
 		Object object = null;
 		if (mbd != null) {
 			mbd.isFactoryBean = true;
@@ -2010,12 +2008,24 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		else {
 			object = getCachedObjectForFactoryBean(beanName);
 		}
+		// 如果缓存中没有找到对应的对象，则需要通过 FactoryBean 创建或获取对象。
 		if (object == null) {
-			// 从工厂返回 bean 实例。
-			// 缓存从 FactoryBean 获得的对象（如果它是单例）。
+			// mbd 为 null，bd 存在，则获取mbd
 			if (mbd == null && containsBeanDefinition(beanName)) {
 				mbd = getMergedLocalBeanDefinition(beanName);
 			}
+			// 合成 Bean 的典型场景：
+			// AOP 代理：Spring AOP 创建的代理 Bean
+			// 作用域代理：@Scope(proxyMode = ScopedProxyMode.TARGET_CLASS) 生成的代理
+			// 配置类代理：@Configuration 类的 CGLIB 代理
+			// 内部基础设施 Bean：Spring 内部使用的辅助 Bean
+			// 这个 synthetic 标志主要用于：
+			// 错误处理：如果是合成 Bean，某些错误可能需要特殊处理
+			// 日志记录：区分用户定义的 Bean 和框架生成的 Bean
+			// 调试信息：帮助开发者理解 Bean 的来源
+			// 后续处理逻辑：某些处理步骤可能对合成 Bean 有不同的行为
+
+			//bean是否是合成的
 			boolean synthetic = (mbd != null && mbd.isSynthetic());
 			object = getObjectFromFactoryBean(factoryBean, requiredType, beanName, !synthetic);
 		}

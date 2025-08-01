@@ -82,16 +82,16 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	/** Common lock for singleton creation. */
 	final Lock singletonLock = new ReentrantLock();
 
-	/** 单例对象的缓存：Bean 名称到 Bean 实例。 */
+	/** 单例对象的缓存：Bean 名称到 Bean 实例。 一级缓存*/
 	private final Map<String, Object> singletonObjects = new ConcurrentHashMap<>(256);
 
-	/** 单例工厂的创建时注册表：Bean 名称为 ObjectFactory。*/
+	/** 三级缓存：beanName 映射到 Bean工厂（创建早期bean的逻辑）*/
 	private final Map<String, ObjectFactory<?>> singletonFactories = new ConcurrentHashMap<>(16);
 
 	/** Custom callbacks for singleton creation/registration. */
 	private final Map<String, Consumer<Object>> singletonCallbacks = new ConcurrentHashMap<>(16);
 
-	/** 早期单例对象的缓存：Bean 名称到 Bean 实例 */
+	/** 早期单例对象的缓存：Bean 名称到 Bean 实例  二级缓存*/
 	private final Map<String, Object> earlySingletonObjects = new ConcurrentHashMap<>(16);
 
 	/** Set of registered singletons, containing the bean names in registration order. */
@@ -220,7 +220,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					if (singletonObject == null) {
 						singletonObject = this.earlySingletonObjects.get(beanName);
 						if (singletonObject == null) {
-							// todo 从单例工厂中获取单例
+							// 从三级缓存中获取单例工厂，创建早期bean
 							ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
 							if (singletonFactory != null) {
 								singletonObject = singletonFactory.getObject();
