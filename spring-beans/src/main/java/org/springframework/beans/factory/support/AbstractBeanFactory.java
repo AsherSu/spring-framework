@@ -115,7 +115,7 @@ import org.springframework.util.StringValueResolver;
  */
 public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport implements ConfigurableBeanFactory {
 
-	/** Parent bean factory, for bean inheritance support. */
+	/** BeanFactory 的 parentBeanFactory，用于实现 Bean 工厂的层次结构支持 */
 	private @Nullable BeanFactory parentBeanFactory;
 
 	/** ClassLoader to resolve bean class names with, if necessary. */
@@ -1211,7 +1211,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	@Override
 	public BeanDefinition getMergedBeanDefinition(String name) throws BeansException {
 		String beanName = transformedBeanName(name);
-		// Efficiently check whether bean definition exists in this factory.
+		// 如果当前 beanFactory 没有该 bean，则去 父beanFactory 寻找
 		if (getParentBeanFactory() instanceof ConfigurableBeanFactory parent && !containsBeanDefinition(beanName)) {
 			return parent.getMergedBeanDefinition(beanName);
 		}
@@ -1334,8 +1334,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	//---------------------------------------------------------------------
 
 	/**
-	 * 返回 bean 名称，必要时去掉工厂取消引用前缀，
-	 * 并将别名解析为规范名称。
+	 * 返回去除 &前缀 的 循环别名映射到最后的规范化 bean 名称。
 	 * @param name the user-specified name
 	 * @return the transformed bean name
 	 */
@@ -1481,8 +1480,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 			if (mbd == null || mbd.stale) {
 				previous = mbd;
+				// 没有 父beanDefinition,当前bd为顶级bd，直接创建rootbd
 				if (bd.getParentName() == null) {
-					// 使用给定的root BeanDefinition 的副本
 					if (bd instanceof RootBeanDefinition rootBeanDef) {
 						mbd = rootBeanDef.cloneBeanDefinition();
 					}
@@ -1490,15 +1489,19 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 						mbd = new RootBeanDefinition(bd);
 					}
 				}
+				// 存在父bd，合并生成mbd
 				else {
-					// 子 beanDefinition: 合并父 beanDefinition
 					BeanDefinition pbd;
 					try {
 						String parentBeanName = transformedBeanName(bd.getParentName());
+						// 非同名bd
 						if (!beanName.equals(parentBeanName)) {
+							// 获取 父bd 的 mbd
 							pbd = getMergedBeanDefinition(parentBeanName);
 						}
+						// 同名bd
 						else {
+							// 同名的fbd，交给当前的父beanFactory 处理获取mbd
 							if (getParentBeanFactory() instanceof ConfigurableBeanFactory parent) {
 								pbd = parent.getMergedBeanDefinition(parentBeanName);
 							}
@@ -1518,7 +1521,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					mbd.overrideFrom(bd);
 				}
 
-				// 如果未配置，则设置默认的单例作用域。
+				// 可能存在配置时，未说明作用域的情况，默认单例
 				if (!StringUtils.hasLength(mbd.getScope())) {
 					mbd.setScope(SCOPE_SINGLETON);
 				}
@@ -1548,6 +1551,30 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			}
 			return mbd;
 		}
+	}
+
+	public static void main(String[] args) {
+		/* ---------- 1. 搭好父子 BeanFactory ---------- */
+		DefaultListableBeanFactory parentFactory = new DefaultListableBeanFactory();
+		DefaultListableBeanFactory childFactory  = new DefaultListableBeanFactory(parentFactory);
+
+		/* ---------- 2. 在父容器注册 “父 BeanDefinition” ---------- */
+		RootBeanDefinition parentDef = new RootBeanDefinition(ExampleBean.class);
+		parentDef.getPropertyValues().add("name", "parent-name");
+		parentFactory.registerBeanDefinition("exampleBean", parentDef);
+
+		/* ---------- 3. 在子容器注册 “子 BeanDefinition”，声明继承 ---------- */
+		ChildBeanDefinition childDef = new ChildBeanDefinition("exampleBean"); // 指定 parentName
+		childDef.getPropertyValues().add("age", 18);                          // 只覆盖差异字段
+		childFactory.registerBeanDefinition("exampleBean", childDef);
+
+		/* ---------- 4. 触发 getMergedBeanDefinition ---------- */
+		BeanDefinition merged = childFactory.getMergedBeanDefinition("exampleBean");
+
+		/* ---------- 5. 打印结果，验证父子属性已合并 ---------- */
+		System.out.println("====== Merged PropertyValues ======");
+		merged.getPropertyValues().forEach(pv ->
+				System.out.println(pv.getName() + " = " + pv.getValue()));
 	}
 
 	/**

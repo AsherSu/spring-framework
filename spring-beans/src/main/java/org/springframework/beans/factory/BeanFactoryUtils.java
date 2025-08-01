@@ -75,7 +75,8 @@ public abstract class BeanFactoryUtils {
 	}
 
 	/**
-	 * 获取实际的 Bean 名称，去除工厂引用前缀（如果存在，并且会去除重复的前缀）。
+	 * 获取不带&前缀的beanName
+	 *
 	 * @param name Bean 的名称
 	 * @return 转换后的名称
 	 * @see BeanFactory#FACTORY_BEAN_PREFIX
@@ -85,7 +86,7 @@ public abstract class BeanFactoryUtils {
 		if (name.isEmpty() || name.charAt(0) != BeanFactory.FACTORY_BEAN_PREFIX_CHAR) {
 			return name;
 		}
-		// 移除所有&前缀
+		// 移除所有&前缀，并缓存
 		return transformedBeanNameCache.computeIfAbsent(name, beanName -> {
 			do {
 				beanName = beanName.substring(1);  // length of '&'
