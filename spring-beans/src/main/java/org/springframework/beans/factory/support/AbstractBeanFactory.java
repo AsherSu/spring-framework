@@ -124,7 +124,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	/** ClassLoader to temporarily resolve bean class names with, if necessary. */
 	private @Nullable ClassLoader tempClassLoader;
 
-	/** 是缓存 bean 元数据，还是每次访问都重新获取它。 */
+	/** 是否缓存 bean 元数据。 Bean Metadata：Bean 自身之外 的各种声明式信息（作用域、依赖、来源、注解等）*/
 	private boolean cacheBeanMetadata = true;
 
 	/** Resolution strategy for expressions in bean definition values. */
@@ -1526,7 +1526,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					mbd.setScope(SCOPE_SINGLETON);
 				}
 
-				// 1、存在一个包含当前Bean的外部Bean定义 (containingBd != null)
+				// 1、存在外部Bean定义 (containingBd != null)
 				// 2、外部Bean是非单例的 (!containingBd.isSingleton())
 				// 3、当前Bean是单例的 (mbd.isSingleton())
 				if (containingBd != null && !containingBd.isSingleton() && mbd.isSingleton()) {
@@ -1537,56 +1537,37 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				// 暂时缓存合并后的 bean 定义
 				//（之后仍可能重新合并，以获取元数据的变更）
 				if (containingBd == null && (isCacheBeanMetadata() || isBeanEligibleForMetadataCaching(beanName))) {
-					// 缓存mbd
+					// 优化性能，复用以下缓存的元数据：
+					// 已解析的构造函数
+					// 已解析的工厂方法
+					// 目标类型信息
+					// 其他与类结构相关但不会因配置变更而改变的元数据
 					cacheMergedBeanDefinition(mbd, beanName);
 				}
 			}
-			// 优化性能，复用以下缓存的元数据：
-			// 已解析的构造函数
-			// 已解析的工厂方法
-			// 目标类型信息
-			// 其他与类结构相关但不会因配置变更而改变的元数据
+
+			// 例如当 BeanDefinition 因为某些原因被标记为过期时：
+			// 1. 父子关系发生变化
+			// 2. 作用域发生变化
+			// 3. 其他配置属性发生变化
 			if (previous != null) {
+				// 在一定情况下，使用之前的缓存 减少反射造成的资源消耗
 				copyRelevantMergedBeanDefinitionCaches(previous, mbd);
 			}
 			return mbd;
 		}
 	}
 
-	public static void main(String[] args) {
-		/* ---------- 1. 搭好父子 BeanFactory ---------- */
-		DefaultListableBeanFactory parentFactory = new DefaultListableBeanFactory();
-		DefaultListableBeanFactory childFactory  = new DefaultListableBeanFactory(parentFactory);
-
-		/* ---------- 2. 在父容器注册 “父 BeanDefinition” ---------- */
-		RootBeanDefinition parentDef = new RootBeanDefinition(ExampleBean.class);
-		parentDef.getPropertyValues().add("name", "parent-name");
-		parentFactory.registerBeanDefinition("exampleBean", parentDef);
-
-		/* ---------- 3. 在子容器注册 “子 BeanDefinition”，声明继承 ---------- */
-		ChildBeanDefinition childDef = new ChildBeanDefinition("exampleBean"); // 指定 parentName
-		childDef.getPropertyValues().add("age", 18);                          // 只覆盖差异字段
-		childFactory.registerBeanDefinition("exampleBean", childDef);
-
-		/* ---------- 4. 触发 getMergedBeanDefinition ---------- */
-		BeanDefinition merged = childFactory.getMergedBeanDefinition("exampleBean");
-
-		/* ---------- 5. 打印结果，验证父子属性已合并 ---------- */
-		System.out.println("====== Merged PropertyValues ======");
-		merged.getPropertyValues().forEach(pv ->
-				System.out.println(pv.getName() + " = " + pv.getValue()));
-	}
-
 	/**
-	 * 将相关的 MergedBeanDefinition 缓存从先前的bean定义复制到当前的bean定义。
-	 * <p>当两个bean定义具有相同的类名、工厂bean名称和工厂方法名时，才会执行复制操作。
-	 * 此外，只有当目标类型相同或当前bean定义没有指定目标类型时，才会复制与类型相关的缓存。
-	 * 如果先前的bean定义包含方法覆盖，则也会将其复制到当前bean定义中。
-	 * @param previous 先前的RootBeanDefinition实例
-	 * @param mbd 当前的RootBeanDefinition实例
+	 * 将先前 mbd 的相关缓存复制到当前 Bean 定义中。
+	 * <p>仅当两个 bd 具有相同的 beanClassName 、 factoryBeanName 和 FactoryMethodName 时，才会执行复制。
+	 * 如果目标类型相同，或者当前 Bean 定义未指定目标类型，则会复制与类型相关的缓存。
+	 * 此外，如果先前的 Bean 定义包含方法覆盖（Method Overrides），也会将其复制到当前 Bean 定义中。
+	 * 
+	 * @param previous 先前的 RootBeanDefinition 实例
+	 * @param mbd 当前的 RootBeanDefinition 实例
 	 */
 	private void copyRelevantMergedBeanDefinitionCaches(RootBeanDefinition previous, RootBeanDefinition mbd) {
-		//todo
 		if (ObjectUtils.nullSafeEquals(mbd.getBeanClassName(), previous.getBeanClassName()) &&
 				ObjectUtils.nullSafeEquals(mbd.getFactoryBeanName(), previous.getFactoryBeanName()) &&
 				ObjectUtils.nullSafeEquals(mbd.getFactoryMethodName(), previous.getFactoryMethodName())) {
