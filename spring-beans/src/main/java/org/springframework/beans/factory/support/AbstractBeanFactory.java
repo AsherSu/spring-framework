@@ -277,25 +277,20 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			beanInstance = getObjectForBeanInstance(sharedInstance, requiredType, name, beanName, null);
 		}
 
-		//
+		// bean不存在，需要创建bean
 		else {
-			// 当创建原型（prototype）作用域的 Bean 时，Spring 在进入创建流程前会调用 beforePrototypeCreation(beanName)，
-			// 将当前正在创建的 Bean 名称记录到线程级别的 prototypesCurrentlyInCreation 中；创建完成后再通过
-			// afterPrototypeCreation(beanName) 将其移除。
-
-			// 如果在创建某个原型 Bean（A） 的过程中，意外又去创建同名或关联的原型 Bean（A）——也就是重新进入创建流程——此时
-			// isPrototypeCurrentlyInCreation(beanName) 会返回 true，说明出现了自引用或循环依赖，
-			// 于是直接抛出 BeanCurrentlyInCreationException。
+			// 原型模式产生循环依赖的情况
+			// 1. 直接自引用：Bean A 在构造函数或属性中直接依赖自己
+			// 2. 构造函数循环依赖：两个或多个原型 Bean 通过构造函数相互依赖
+			// 3. 工厂方法循环依赖：通过 @Bean 方法创建的原型 Bean 之间的循环依赖
+			// 4. 多层级循环依赖：A → B → C → A 的循环依赖链
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
 			}
 
-			// Check if bean definition exists in this factory.
 			BeanFactory parentBeanFactory = getParentBeanFactory();
-			// 条件：有父工厂 且 当前工厂没有该 Bean 定义
-			// 让父工厂创建bean
+			// 有父工厂 且 当前工厂没有该bd，让父工厂创建bean
 			if (parentBeanFactory != null && !containsBeanDefinition(beanName)) {
-				// Not found -> check parent.
 				String nameToLookup = originalBeanName(name);
 				if (parentBeanFactory instanceof AbstractBeanFactory abf) {
 					return abf.doGetBean(nameToLookup, requiredType, args, typeCheckOnly);
@@ -1349,12 +1344,15 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	}
 
 	/**
-	 * 确定原始 Bean 名称，将本地定义的别名解析为规范名称。
+	 * 返回规范化的 bean 名称。（是否前缀 & 跟随 入参）
+	 *
 	 * @param name the user-specified name
 	 * @return the original bean name
 	 */
 	protected String originalBeanName(String name) {
+		// 获取规范化beanName
 		String beanName = transformedBeanName(name);
+		// 如果原始名称以&开头，重新添加前缀
 		if (!name.isEmpty() && name.charAt(0) == BeanFactory.FACTORY_BEAN_PREFIX_CHAR) {
 			beanName = FACTORY_BEAN_PREFIX + beanName;
 		}
