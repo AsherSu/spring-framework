@@ -245,6 +245,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 
 	/**
 	 * 从给定的 FactoryBean 中获取要暴露的对象实例。
+	 *
 	 * <p>该方法会根据 FactoryBean 是否为 SmartFactoryBean 来决定调用哪个 getObject 方法：
 	 * <ul>
 	 *   <li>如果是 SmartFactoryBean 且指定了 requiredType，则调用带类型的 getObject 方法。</li>
@@ -263,7 +264,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 
 		Object object;
 		try {
-			// 根据是否指定了 requiredType 以及 factory 是否为 SmartFactoryBean 来决定调用哪个 getObject 方法
+			// requiredType != null 且 factory 为 SmartFactoryBean ，调用带参数的 getObject 方法。
 			object = (requiredType != null && factory instanceof SmartFactoryBean<?> smartFactoryBean ?
 					smartFactoryBean.getObject(requiredType) : factory.getObject());
 		}
@@ -276,7 +277,12 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 			throw new BeanCreationException(beanName, "FactoryBean threw exception on object creation", ex);
 		}
 
-		// 不接受尚未完全初始化的 FactoryBean 返回 null 值：许多 FactoryBean 在这种情况下会返回 null。
+		// 可能为null的情况：
+		// 初始化未完成：FactoryBean在初始化过程中，依赖的资源或属性还未准备就绪
+		// 延迟初始化：某些FactoryBean采用延迟初始化策略，在特定条件满足前返回null
+		// 条件性创建：基于运行时条件判断是否需要创建对象
+		// 资源不可用：依赖的外部资源（如数据库连接、文件等）暂时不可用
+		// 循环依赖：在复杂的依赖关系中，可能出现临时的null返回
 		if (object == null) {
 			// 如果当前单例 bean 正在创建中，则抛出异常
 			if (isSingletonCurrentlyInCreation(beanName)) {

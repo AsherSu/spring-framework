@@ -1978,7 +1978,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		// 2. name 不带 &，且 beanInstance 不是 FactoryBean，直接返回普通 Bean 实例。
 		// 3. name 不带 &，但 beanInstance 是 FactoryBean，此时要调用 factoryBean.getObject()，返回该工厂创建的对象
 
-		// name 为 & 开头，说明本次调用需要的是 factoryBean，。
+		// name 为 & 开头，说明本次调用需要的是 factoryBean。
 		if (BeanFactoryUtils.isFactoryDereference(name)) {
 			//首先判断是否是 NullBean 占位符，若是则直接返回它。
 			if (beanInstance instanceof NullBean) {

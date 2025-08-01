@@ -636,7 +636,7 @@ public abstract class AbstractEntityManagerFactoryBean implements
 	}
 
 	/**
-	 * Return either the singleton EntityManagerFactory or the shared EntityManager proxy.
+	 * 返回单例的 EntityManagerFactory 或共享的 EntityManager 代理。
 	 */
 	@Override
 	public <S> @Nullable S getObject(Class<S> type) throws Exception {
