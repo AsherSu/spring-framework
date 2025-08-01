@@ -26,6 +26,7 @@ import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.http.MediaType;
+import org.springframework.util.Assert;
 import org.springframework.web.accept.ApiVersionDeprecationHandler;
 import org.springframework.web.accept.ApiVersionParser;
 import org.springframework.web.accept.ApiVersionResolver;
@@ -34,6 +35,7 @@ import org.springframework.web.accept.DefaultApiVersionStrategy;
 import org.springframework.web.accept.InvalidApiVersionException;
 import org.springframework.web.accept.MediaTypeParamApiVersionResolver;
 import org.springframework.web.accept.PathApiVersionResolver;
+import org.springframework.web.accept.QueryApiVersionResolver;
 import org.springframework.web.accept.SemanticApiVersionParser;
 import org.springframework.web.accept.StandardApiVersionDeprecationHandler;
 
@@ -49,7 +51,7 @@ public class ApiVersionConfigurer {
 
 	private @Nullable ApiVersionParser<?> versionParser;
 
-	private boolean versionRequired = true;
+	private @Nullable Boolean versionRequired;
 
 	private @Nullable String defaultVersion;
 
@@ -70,21 +72,11 @@ public class ApiVersionConfigurer {
 	}
 
 	/**
-	 * Add resolver to extract the version from a request parameter.
+	 * Add resolver to extract the version from a query string parameter.
 	 * @param paramName the parameter name to check
 	 */
-	public ApiVersionConfigurer useRequestParam(String paramName) {
-		this.versionResolvers.add(request -> request.getParameter(paramName));
-		return this;
-	}
-
-	/**
-	 * Add resolver to extract the version from a path segment.
-	 * @param index the index of the path segment to check; e.g. for URL's like
-	 * "/{version}/..." use index 0, for "/api/{version}/..." index 1.
-	 */
-	public ApiVersionConfigurer usePathSegment(int index) {
-		this.versionResolvers.add(new PathApiVersionResolver(index));
+	public ApiVersionConfigurer useQueryParam(String paramName) {
+		this.versionResolvers.add(new QueryApiVersionResolver(paramName));
 		return this;
 	}
 
@@ -97,6 +89,18 @@ public class ApiVersionConfigurer {
 	 */
 	public ApiVersionConfigurer useMediaTypeParameter(MediaType compatibleMediaType, String paramName) {
 		this.versionResolvers.add(new MediaTypeParamApiVersionResolver(compatibleMediaType, paramName));
+		return this;
+	}
+
+	/**
+	 * Add resolver to extract the version from a path segment.
+	 * <p>Note that this resolver never returns {@code null}, and therefore
+	 * cannot yield to other resolvers, see {@link PathApiVersionResolver}.
+	 * @param index the index of the path segment to check; e.g. for URL's like
+	 * "/{version}/..." use index 0, for "/api/{version}/..." index 1.
+	 */
+	public ApiVersionConfigurer usePathSegment(int index) {
+		this.versionResolvers.add(new PathApiVersionResolver(index));
 		return this;
 	}
 
@@ -188,18 +192,26 @@ public class ApiVersionConfigurer {
 	}
 
 	protected @Nullable ApiVersionStrategy getApiVersionStrategy() {
+
 		if (this.versionResolvers.isEmpty()) {
+			Assert.state(isNotCustomized(), "API version config customized, but no ApiVersionResolver provided");
 			return null;
 		}
 
 		DefaultApiVersionStrategy strategy = new DefaultApiVersionStrategy(this.versionResolvers,
 				(this.versionParser != null ? this.versionParser : new SemanticApiVersionParser()),
-				this.versionRequired, this.defaultVersion, this.detectSupportedVersions,
+				(this.versionRequired != null ? this.versionRequired : true),
+				this.defaultVersion, this.detectSupportedVersions,
 				this.deprecationHandler);
 
 		this.supportedVersions.forEach(strategy::addSupportedVersion);
 
 		return strategy;
+	}
+
+	private boolean isNotCustomized() {
+		return (this.versionParser == null && this.versionRequired == null &&
+				this.defaultVersion == null && this.supportedVersions.isEmpty());
 	}
 
 }
