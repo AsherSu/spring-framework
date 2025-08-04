@@ -320,10 +320,9 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 	}
 
 	/**
-	 * Initialize parameter name discovery for the underlying method parameter, if any.
-	 * <p>This method does not actually try to retrieve the parameter name at
-	 * this point; it just allows discovery to happen when the application calls
-	 * {@link #getDependencyName()} (if ever).
+	 * 为底层的方法参数初始化参数名称发现功能（如果存在方法参数的话）。
+	 * <p>此方法不会立即尝试获取参数名称；
+	 * 而是当应用程序调用 {@link #getDependencyName()} 时才进行参数名称的查找（如果需要的话）。
 	 */
 	public void initParameterNameDiscovery(@Nullable ParameterNameDiscoverer parameterNameDiscoverer) {
 		if (this.methodParameter != null) {
@@ -340,8 +339,8 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 	}
 
 	/**
-	 * Determine the declared (non-generic) type of the wrapped parameter/field.
-	 * @return the declared type (never {@code null})
+	 * 确定包装的参数/字段的声明（非泛型）类型。
+	 * @return 声明的类型（永不为 {@code null}）
 	 */
 	public Class<?> getDependencyType() {
 		if (this.field != null) {

@@ -487,8 +487,10 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	@Override
 	public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) {
+		// 收集所有需要注入的字段和方法信息
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, bean.getClass(), pvs);
 		try {
+			// 依赖注入
 			metadata.inject(bean, beanName, pvs);
 		}
 		catch (BeanCreationException ex) {
@@ -731,24 +733,30 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 		@Override
 		protected void inject(Object bean, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
+			// 获取要注入的字段
 			Field field = (Field) this.member;
 			Object value;
 			if (this.cached) {
+				// 如果已缓存，尝试从缓存中解析依赖值
 				try {
 					value = resolveCachedArgument(beanName, this.cachedFieldValue);
 				}
 				catch (BeansException ex) {
-					// Unexpected target bean mismatch for cached argument -> re-resolve
+					// 缓存的参数出现意外的目标bean不匹配 -> 重新解析
 					this.cached = false;
 					logger.debug("Failed to resolve cached argument", ex);
 					value = resolveFieldValue(field, bean, beanName);
 				}
 			}
 			else {
+				// 未缓存时，直接解析字段值
 				value = resolveFieldValue(field, bean, beanName);
 			}
+			// 如果解析到值，则进行字段注入
 			if (value != null) {
+				// 设置字段可访问（处理private字段）
 				ReflectionUtils.makeAccessible(field);
+				// 将解析到的值设置到目标对象的字段中
 				field.set(bean, value);
 			}
 		}

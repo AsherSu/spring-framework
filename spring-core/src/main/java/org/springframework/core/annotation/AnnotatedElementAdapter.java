@@ -41,16 +41,12 @@ public final class AnnotatedElementAdapter implements AnnotatedElement, Serializ
 
 
 	/**
-	 * Create an {@code AnnotatedElementAdapter} from the supplied annotations.
-	 * <p>The supplied annotations will be considered to be both <em>present</em>
-	 * and <em>directly present</em> with regard to the results returned from
-	 * methods such as {@link #getAnnotation(Class)},
-	 * {@link #getDeclaredAnnotation(Class)}, etc.
-	 * <p>If the supplied annotations array is either {@code null} or empty, this
-	 * factory method will return an {@linkplain #isEmpty() empty} adapter.
-	 * @param annotations the annotations to expose via the {@link AnnotatedElement}
-	 * API
-	 * @return a new {@code AnnotatedElementAdapter}
+	 * 从提供的注解数组创建一个 {@code AnnotatedElementAdapter} 实例。
+	 * <p>所提供的注解将被视为既是<em>存在</em>的也是<em>直接存在</em>的，
+	 * 这会影响诸如 {@link #getAnnotation(Class)}、{@link #getDeclaredAnnotation(Class)} 等方法的返回结果。
+	 * <p>如果提供的注解数组为 {@code null} 或者为空，此工厂方法将返回一个 {@linkplain #isEmpty() 空} 的适配器。
+	 * @param annotations 要通过 {@link AnnotatedElement} API 暴露的注解
+	 * @return 一个新的 {@code AnnotatedElementAdapter} 实例
 	 */
 	public static AnnotatedElementAdapter from(Annotation @Nullable [] annotations) {
 		if (annotations == null || annotations.length == 0) {
