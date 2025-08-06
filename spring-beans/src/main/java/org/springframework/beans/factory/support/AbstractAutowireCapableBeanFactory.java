@@ -1474,29 +1474,38 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
-	 * Fill in any missing property values with references to
-	 * other beans in this factory if autowire is set to "byName".
-	 * @param beanName the name of the bean we're wiring up.
-	 * Useful for debugging messages; not used functionally.
-	 * @param mbd bean definition to update through autowiring
-	 * @param bw the BeanWrapper from which we can obtain information about the bean
-	 * @param pvs the PropertyValues to register wired objects with
+	 * 通过名称自动装配属性值。对于未满足的非简单属性，如果工厂中存在同名的bean，则将其注入。
+	 * 
+	 * @param beanName 当前正在装配的bean的名称，主要用于调试日志
+	 * @param mbd 当前bean的定义信息，包含自动装配模式等配置
+	 * @param bw BeanWrapper实例，用于访问和操作bean的属性
+	 * @param pvs 可变的属性值集合，用于添加自动装配的属性值
 	 */
 	protected void autowireByName(
 			String beanName, AbstractBeanDefinition mbd, BeanWrapper bw, MutablePropertyValues pvs) {
 
+		// 获取所有未满足的非简单属性名称
+		// 非简单属性指不是基本类型、String等简单类型的属性
 		String[] propertyNames = unsatisfiedNonSimpleProperties(mbd, bw);
+		
+		// 遍历所有未满足的属性
 		for (String propertyName : propertyNames) {
+			// 检查当前工厂是否包含与属性名同名的bean
 			if (containsBean(propertyName)) {
+				// 获取同名的bean实例
 				Object bean = getBean(propertyName);
+				// 将获取到的bean实例添加到属性值集合中，实现属性注入
 				pvs.add(propertyName, bean);
+				// 注册依赖关系，用于后续的依赖管理和销毁顺序确定
 				registerDependentBean(propertyName, beanName);
+				// 记录详细的跟踪日志
 				if (logger.isTraceEnabled()) {
 					logger.trace("Added autowiring by name from bean name '" + beanName +
 							"' via property '" + propertyName + "' to bean named '" + propertyName + "'");
 				}
 			}
 			else {
+				// 如果没有找到同名bean，记录跟踪日志
 				if (logger.isTraceEnabled()) {
 					logger.trace("Not autowiring property '" + propertyName + "' of bean '" + beanName +
 							"' by name: no matching bean found");
@@ -1558,24 +1567,37 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 
 	/**
-	 * Return an array of non-simple bean properties that are unsatisfied.
-	 * These are probably unsatisfied references to other beans in the
-	 * factory. Does not include simple properties like primitives or Strings.
-	 * @param mbd the merged bean definition the bean was created with
-	 * @param bw the BeanWrapper the bean was created with
-	 * @return an array of bean property names
+	 * 返回不满足条件的非简单属性列表。
+	 * 这些属性通常是工厂中其他未被满足的 bean 引用。
+	 * 不包括简单属性，例如基本类型（primitives）或字符串（String）。
+	 * @param mbd 合并后的 bean 定义
+	 * @param bw 用于创建 bean 的 BeanWrapper
+	 * @return 不满足条件的 bean 属性名称数组
 	 * @see org.springframework.beans.BeanUtils#isSimpleProperty
 	 */
 	protected String[] unsatisfiedNonSimpleProperties(AbstractBeanDefinition mbd, BeanWrapper bw) {
+		// 使用 TreeSet 保证结果有序且无重复
 		Set<String> result = new TreeSet<>();
+		// 获取 bean 定义中的属性值
 		PropertyValues pvs = mbd.getPropertyValues();
+		// 获取 bean 的所有属性描述符
 		PropertyDescriptor[] pds = bw.getPropertyDescriptors();
+		// 遍历所有属性描述符
 		for (PropertyDescriptor pd : pds) {
-			if (pd.getWriteMethod() != null && !isExcludedFromDependencyCheck(pd) && !pvs.contains(pd.getName()) &&
-					!BeanUtils.isSimpleProperty(pd.getPropertyType())) {
+			// 检查属性是否满足以下条件：
+			// 1. 有写方法（可写属性）
+			// 2. 没有被排除在依赖检查之外
+			// 3. 当前未在属性值中定义（即未被满足）
+			// 4. 不是简单属性（如基本类型、String 等）
+			if (pd.getWriteMethod() != null && 
+				!isExcludedFromDependencyCheck(pd) && 
+				!pvs.contains(pd.getName()) &&
+				!BeanUtils.isSimpleProperty(pd.getPropertyType())) {
+				// 将满足条件的属性名添加到结果集中
 				result.add(pd.getName());
 			}
 		}
+		// 将结果集转换为字符串数组并返回
 		return StringUtils.toStringArray(result);
 	}
 
