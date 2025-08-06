@@ -148,7 +148,13 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	/** String resolvers to apply, for example, to annotation attribute values. */
 	private final List<StringValueResolver> embeddedValueResolvers = new CopyOnWriteArrayList<>();
 
-	/** BeanPostProcessors to apply. */
+	/** 存储和管理beanPostProcessor的集合.
+	 *
+	 * Bean生命周期增强: BeanPostProcessor可以在Bean初始化前后执行自定义逻辑
+	 * AOP代理创建: 许多AOP实现通过BeanPostProcessor创建代理对象
+	 * 依赖注入: 如@Autowired、@Resource等注解的处理
+	 * 属性填充: 在Bean属性设置阶段进行干预
+	 */
 	private final List<BeanPostProcessor> beanPostProcessors = new BeanPostProcessorCacheAwareList();
 
 	/** Cache of pre-filtered post-processors. */
@@ -1076,34 +1082,66 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	}
 
 	/**
-	 * Return the internal cache of pre-filtered post-processors,
-	 * freshly (re-)building it if necessary.
+	 * 返回预过滤 BeanPostProcessor 的内部缓存，如有必要，将重新构建它。（减少 类型检查instanceof + 强制转换）
+	 *
+	 * 这个方法是Spring框架中的性能优化机制，通过缓存不同类型的BeanPostProcessor
+	 * 来避免在Bean生命周期的各个阶段重复进行类型检查和转换操作。
+	 *
+	 * 缓存的BeanPostProcessor类型包括：
+	 * - InstantiationAware: 每个Bean创建时都要检查是否需要自定义实例化
+	 * - SmartInstantiationAware: AOP代理创建、构造函数推断时频繁使用
+	 * - DestructionAware: 单例Bean销毁时必须调用
+	 * - MergedBeanDefinition: 每次合并Bean定义时都需要
+	 *
+	 * @return BeanPostProcessor缓存对象，包含按类型分类的处理器列表
 	 * @since 5.3
 	 */
 	BeanPostProcessorCache getBeanPostProcessorCache() {
+		// 使用synchronized确保多线程环境下的线程安全
+		// 以beanPostProcessors集合作为锁对象，避免在构建缓存过程中集合被修改
 		synchronized (this.beanPostProcessors) {
 			BeanPostProcessorCache bppCache = this.beanPostProcessorCache;
+
+			// 懒加载机制 - 只有在缓存为null时才重新构建
 			if (bppCache == null) {
 				bppCache = new BeanPostProcessorCache();
+
+				// 第四步：遍历所有已注册的BeanPostProcessor进行分类缓存
 				for (BeanPostProcessor bpp : this.beanPostProcessors) {
+					// 实例化感知处理器
 					if (bpp instanceof InstantiationAwareBeanPostProcessor instantiationAwareBpp) {
+						// 添加到实例化感知处理器缓存列表
 						bppCache.instantiationAware.add(instantiationAwareBpp);
+
+						// 嵌套类型检查：智能实例化感知处理器
 						if (bpp instanceof SmartInstantiationAwareBeanPostProcessor smartInstantiationAwareBpp) {
+							// 添加到智能实例化感知处理器缓存列表
 							bppCache.smartInstantiationAware.add(smartInstantiationAwareBpp);
 						}
 					}
+
+					// 销毁感知处理器，用于处理Bean销毁前的清理逻辑
 					if (bpp instanceof DestructionAwareBeanPostProcessor destructionAwareBpp) {
+						// 添加到销毁感知处理器缓存列表
 						bppCache.destructionAware.add(destructionAwareBpp);
 					}
+
+					// 合并Bean定义处理器，用于处理Bean定义合并后的后置处理逻辑
 					if (bpp instanceof MergedBeanDefinitionPostProcessor mergedBeanDefBpp) {
+						// 添加到合并Bean定义处理器缓存列表
 						bppCache.mergedDefinition.add(mergedBeanDefBpp);
 					}
 				}
+
+				// 将构建完成的缓存设置到实例变量中
 				this.beanPostProcessorCache = bppCache;
 			}
+
+			// 返回缓存对象，如果缓存已存在则直接返回，如果不存在则返回刚构建的缓存
 			return bppCache;
 		}
 	}
+
 
 	private void resetBeanPostProcessorCache() {
 		synchronized (this.beanPostProcessors) {
@@ -1563,7 +1601,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * <p>仅当两个 bd 具有相同的 beanClassName 、 factoryBeanName 和 FactoryMethodName 时，才会执行复制。
 	 * 如果目标类型相同，或者当前 Bean 定义未指定目标类型，则会复制与类型相关的缓存。
 	 * 此外，如果先前的 Bean 定义包含方法覆盖（Method Overrides），也会将其复制到当前 Bean 定义中。
-	 * 
+	 *
 	 * @param previous 先前的 RootBeanDefinition 实例
 	 * @param mbd 当前的 RootBeanDefinition 实例
 	 */

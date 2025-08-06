@@ -204,6 +204,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 
 	private @Nullable ConstructorArgumentValues constructorArgumentValues;
 
+	// 需要注入到 Bean 实例中的属性名称和对应值
 	private @Nullable MutablePropertyValues propertyValues;
 
 	private MethodOverrides methodOverrides = new MethodOverrides();
@@ -216,6 +217,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 
 	private boolean enforceDestroyMethod = true;
 
+	// 不是通过应用程序的配置文件 或 注解直接定义的bean
 	private boolean synthetic = false;
 
 	private int role = BeanDefinition.ROLE_APPLICATION;
@@ -645,26 +647,31 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	}
 
 	/**
-	 * Return the resolved autowire code,
+	 * 返回解析后的 autowire 代码
 	 * (resolving AUTOWIRE_AUTODETECT to AUTOWIRE_CONSTRUCTOR or AUTOWIRE_BY_TYPE).
 	 * @see #AUTOWIRE_AUTODETECT
 	 * @see #AUTOWIRE_CONSTRUCTOR
 	 * @see #AUTOWIRE_BY_TYPE
 	 */
+	// 返回解析后的自动装配代码
+	// 将 AUTOWIRE_AUTODETECT 解析为 AUTOWIRE_CONSTRUCTOR 或 AUTOWIRE_BY_TYPE
 	public int getResolvedAutowireMode() {
+		// 如果自动装配模式是自动检测
 		if (this.autowireMode == AUTOWIRE_AUTODETECT) {
-			// Work out whether to apply setter autowiring or constructor autowiring.
-			// If it has a no-arg constructor it's deemed to be setter autowiring,
-			// otherwise we'll try constructor autowiring.
+			// 如果有 无参构造器，则认为是 setter 自动装配
+			// 否则尝试构造器自动装配
 			Constructor<?>[] constructors = getBeanClass().getConstructors();
 			for (Constructor<?> constructor : constructors) {
+				// 如果找到无参构造器，返回按类型自动装配
 				if (constructor.getParameterCount() == 0) {
 					return AUTOWIRE_BY_TYPE;
 				}
 			}
+			// 没有无参构造器，返回构造器自动装配
 			return AUTOWIRE_CONSTRUCTOR;
 		}
 		else {
+			// 直接返回当前的自动装配模式
 			return this.autowireMode;
 		}
 	}

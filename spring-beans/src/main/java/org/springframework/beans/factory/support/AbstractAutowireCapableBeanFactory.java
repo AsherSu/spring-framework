@@ -1381,66 +1381,75 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
-	 * Populate the bean instance in the given BeanWrapper with the property values
-	 * from the bean definition.
-	 * @param beanName the name of the bean
-	 * @param mbd the bean definition for the bean
-	 * @param bw the BeanWrapper with bean instance
+	 * 使用bd中的属性值填充给定BeanWrapper中的Bean实例。
+	 * @param beanName Bean的名称
+	 * @param mbd Bean的定义
+	 * @param bw 包含Bean实例的BeanWrapper
 	 */
 	protected void populateBean(String beanName, RootBeanDefinition mbd, @Nullable BeanWrapper bw) {
+		// 检查BeanWrapper是否为null，如果为null但有属性值需要设置，则抛出异常
 		if (bw == null) {
 			if (mbd.hasPropertyValues()) {
 				throw new BeanCreationException(
 						mbd.getResourceDescription(), beanName, "Cannot apply property values to null instance");
 			}
 			else {
-				// Skip property population phase for null instance.
+				// 如果没有属性值需要设置，直接返回，跳过属性填充阶段
 				return;
 			}
 		}
 
+		// 排除Record类型，Record是不可变的，不能设置属性值
 		if (bw.getWrappedClass().isRecord()) {
 			if (mbd.hasPropertyValues()) {
 				throw new BeanCreationException(
 						mbd.getResourceDescription(), beanName, "Cannot apply property values to a record");
 			}
 			else {
-				// Skip property population phase for records since they are immutable.
+				// 如果是Record类型，直接返回，跳过属性填充阶段
 				return;
 			}
 		}
 
-		// Give any InstantiationAwareBeanPostProcessors the opportunity to modify the
-		// state of the bean before properties are set. This can be used, for example,
-		// to support styles of field injection.
+		// 非合成Bean（非用户bean）且 具有instantiationAwareBeanPostProcessors时执行
+		// 在设置属性之前，给InstantiationAwareBeanPostProcessor一个机会来修改Bean的状态
+		// 这可以用于支持字段注入等操作
 		if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 			for (InstantiationAwareBeanPostProcessor bp : getBeanPostProcessorCache().instantiationAware) {
+				// 如果postProcessAfterInstantiation返回false，跳过后续的属性填充，由后处理器自己处理属性设置
 				if (!bp.postProcessAfterInstantiation(bw.getWrappedInstance(), beanName)) {
 					return;
 				}
 			}
 		}
 
+		// 获取Bean定义中的属性值
 		PropertyValues pvs = (mbd.hasPropertyValues() ? mbd.getPropertyValues() : null);
 
+		// 获取解析后的自动装配模式（按名称或按类型）
 		int resolvedAutowireMode = mbd.getResolvedAutowireMode();
 		if (resolvedAutowireMode == AUTOWIRE_BY_NAME || resolvedAutowireMode == AUTOWIRE_BY_TYPE) {
+			// 创建一个新的MutablePropertyValues来存储自动装配的属性值
 			MutablePropertyValues newPvs = new MutablePropertyValues(pvs);
-			// Add property values based on autowire by name if applicable.
+			// 如果是按名称自动装配，调用autowireByName方法
 			if (resolvedAutowireMode == AUTOWIRE_BY_NAME) {
 				autowireByName(beanName, mbd, bw, newPvs);
 			}
-			// Add property values based on autowire by type if applicable.
+			// 如果是按类型自动装配，调用autowireByType方法
 			if (resolvedAutowireMode == AUTOWIRE_BY_TYPE) {
 				autowireByType(beanName, mbd, bw, newPvs);
 			}
+			// 更新属性值
 			pvs = newPvs;
 		}
+		
+		// 应用BeanPostProcessor处理属性值
 		if (hasInstantiationAwareBeanPostProcessors()) {
 			if (pvs == null) {
 				pvs = mbd.getPropertyValues();
 			}
 			for (InstantiationAwareBeanPostProcessor bp : getBeanPostProcessorCache().instantiationAware) {
+				// 调用postProcessProperties方法处理属性值
 				PropertyValues pvsToUse = bp.postProcessProperties(pvs, bw.getWrappedInstance(), beanName);
 				if (pvsToUse == null) {
 					return;
@@ -1449,12 +1458,16 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 		}
 
+		// 检查是否需要进行依赖检查
 		boolean needsDepCheck = (mbd.getDependencyCheck() != AbstractBeanDefinition.DEPENDENCY_CHECK_NONE);
 		if (needsDepCheck) {
+			// 过滤出需要进行依赖检查的属性描述符
 			PropertyDescriptor[] filteredPds = filterPropertyDescriptorsForDependencyCheck(bw, mbd.allowCaching);
+			// 执行依赖检查
 			checkDependencies(beanName, mbd, filteredPds, pvs);
 		}
 
+		// 如果有属性值需要设置，调用applyPropertyValues方法应用这些属性值
 		if (pvs != null) {
 			applyPropertyValues(beanName, mbd, bw, pvs);
 		}
