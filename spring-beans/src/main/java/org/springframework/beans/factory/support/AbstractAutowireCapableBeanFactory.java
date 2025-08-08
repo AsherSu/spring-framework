@@ -1426,7 +1426,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// 获取Bean定义中的属性值
 		PropertyValues pvs = (mbd.hasPropertyValues() ? mbd.getPropertyValues() : null);
 
-		// 获取解析后的自动装配模式（按名称或按类型）
+		// 获取解析后的自动装配模式（按名称或按类型） xml配置使用
 		int resolvedAutowireMode = mbd.getResolvedAutowireMode();
 		if (resolvedAutowireMode == AUTOWIRE_BY_NAME || resolvedAutowireMode == AUTOWIRE_BY_TYPE) {
 			// 创建一个新的MutablePropertyValues来存储自动装配的属性值
@@ -1567,12 +1567,14 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 
 	/**
-	 * 返回不满足条件的非简单属性列表。
-	 * 这些属性通常是工厂中其他未被满足的 bean 引用。
-	 * 不包括简单属性，例如基本类型（primitives）或字符串（String）。
-	 * @param mbd 合并后的 bean 定义
-	 * @param bw 用于创建 bean 的 BeanWrapper
-	 * @return 不满足条件的 bean 属性名称数组
+	 * 找出所有需要依赖注入但尚未满足的复杂属性
+	 * <p>
+	 * 该方法会筛选出那些不是简单类型（如int、String等）且当前还未被设置值的属性，
+	 * 这些属性通常是对其他Bean的引用，需要Spring容器进一步注入。
+	 * 
+	 * @param mbd 当前正在处理的Bean定义信息
+	 * @param bw  用于操作Bean属性的包装器
+	 * @return 需要依赖注入的属性名称数组（按字母顺序排序）
 	 * @see org.springframework.beans.BeanUtils#isSimpleProperty
 	 */
 	protected String[] unsatisfiedNonSimpleProperties(AbstractBeanDefinition mbd, BeanWrapper bw) {

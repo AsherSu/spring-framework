@@ -498,14 +498,31 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		return (T) bean;
 	}
 
+	/**
+	 * 检查工厂中是否包含具有给定名称的 bean 实例或定义。
+	 * <p>如果给定名称是别名，它将被转换回相应的规范 bean 名称。
+	 * <p>如果此工厂是分层的，将向上询问任何父工厂（如果在此工厂实例中找不到该 bean）。
+	 * <p>如果找到与给定名称匹配的 bean 定义或单例实例，此方法将返回 {@code true}，
+	 * 无论命名的 bean 定义是具体的还是抽象的、延迟加载还是急切加载、作用域内还是不在作用域内。
+	 * 因此，请注意，{@code true} 的返回值不一定表示 {@link #getBean} 能够为同一名称获取实例。
+	 * @param name 要查询的 bean 的名称
+	 * @return 是否存在具有给定名称的 bean
+	 */
 	@Override
 	public boolean containsBean(String name) {
+		// 转换 bean 名称，如果以 & 开头则去除前缀获取真实的 beanName
 		String beanName = transformedBeanName(name);
+		
+		// 检查当前工厂是否包含该 bean 实例或定义
 		if (containsSingleton(beanName) || containsBeanDefinition(beanName)) {
+			// 如果 name 是工厂引用（以 & 开头），则检查对应的 bean 是否为 FactoryBean
+			// 否则直接返回 true 表示找到了对应的 bean
 			return (!BeanFactoryUtils.isFactoryDereference(name) || isFactoryBean(name));
 		}
-		// Not found -> check parent.
+		
+		// 当前工厂未找到 -> 检查父工厂
 		BeanFactory parentBeanFactory = getParentBeanFactory();
+		// 如果存在父工厂，则委托给父工厂进行检查
 		return (parentBeanFactory != null && parentBeanFactory.containsBean(originalBeanName(name)));
 	}
 

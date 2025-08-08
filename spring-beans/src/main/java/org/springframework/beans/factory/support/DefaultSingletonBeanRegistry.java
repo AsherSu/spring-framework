@@ -133,7 +133,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	/** Bean依赖关系映射：被依赖的Bean名称 -> 依赖它的Bean名称集合（depBeanName->beanName） */
 	private final Map<String, Set<String>> dependentBeanMap = new ConcurrentHashMap<>(64);
 
-	/** 在依赖 bean 名称之间映射：bean 名称到 bean 依赖项的 bean 名称集。（beanName->depBeanName）*/
+	/** 在依赖 bean 名称之间映射：beanName -> 依赖的 beanName 集。（beanName->depBeanName）*/
 	private final Map<String, Set<String>> dependenciesForBeanMap = new ConcurrentHashMap<>(64);
 
 
