@@ -162,7 +162,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	/** Cache of candidate factory methods per factory class. */
 	private final ConcurrentMap<Class<?>, Method[]> factoryMethodCandidateCache = new ConcurrentHashMap<>();
 
-	/** Cache of filtered PropertyDescriptors: bean Class to PropertyDescriptor array. */
+	/** 缓存过滤后的 PropertyDescriptor：Bean 类 -> PropertyDescriptor 数组的映射。 */
 	private final ConcurrentMap<Class<?>, PropertyDescriptor[]> filteredPropertyDescriptorsCache =
 			new ConcurrentHashMap<>();
 
@@ -1426,7 +1426,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// 获取Bean定义中的属性值
 		PropertyValues pvs = (mbd.hasPropertyValues() ? mbd.getPropertyValues() : null);
 
-		// 获取解析后的自动装配模式（按名称或按类型） xml配置使用
+		/* xml配置使用 */
+		// 获取解析后的自动装配模式（按名称或按类型）
 		int resolvedAutowireMode = mbd.getResolvedAutowireMode();
 		if (resolvedAutowireMode == AUTOWIRE_BY_NAME || resolvedAutowireMode == AUTOWIRE_BY_TYPE) {
 			// 创建一个新的MutablePropertyValues来存储自动装配的属性值
@@ -1449,8 +1450,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				pvs = mbd.getPropertyValues();
 			}
 			for (InstantiationAwareBeanPostProcessor bp : getBeanPostProcessorCache().instantiationAware) {
-				// 调用postProcessProperties方法处理属性值
+				// 调用postProcessProperties方法处理bean的属性值
 				PropertyValues pvsToUse = bp.postProcessProperties(pvs, bw.getWrappedInstance(), beanName);
+				// 跳过后续填充
 				if (pvsToUse == null) {
 					return;
 				}

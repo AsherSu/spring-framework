@@ -102,7 +102,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	public static final int AUTOWIRE_AUTODETECT = AutowireCapableBeanFactory.AUTOWIRE_AUTODETECT;
 
 	/**
-	 * Constant that indicates no dependency check at all.
+	 * 不进行依赖检查的标志位
 	 * @see #setDependencyCheck
 	 */
 	public static final int DEPENDENCY_CHECK_NONE = 0;
@@ -690,7 +690,14 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	}
 
 	/**
-	 * Return the dependency check code.
+	 * 获取依赖检查代码。
+	 *
+	 * DEPENDENCY_CHECK_NONE (0) - 不进行依赖检查（默认）
+	 * DEPENDENCY_CHECK_OBJECTS (1) - 检查对象引用依赖
+	 * DEPENDENCY_CHECK_SIMPLE (2) - 检查简单属性依赖
+	 * DEPENDENCY_CHECK_ALL (3) - 检查所有依赖（对象引用+简单属性）
+	 *
+	 * @return 返回当前的依赖检查代码值
 	 */
 	public int getDependencyCheck() {
 		return this.dependencyCheck;
