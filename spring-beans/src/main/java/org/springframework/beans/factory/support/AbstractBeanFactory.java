@@ -142,7 +142,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	/** Custom PropertyEditors to apply to the beans of this factory. */
 	private final Map<Class<?>, Class<? extends PropertyEditor>> customEditors = new HashMap<>(4);
 
-	/** A custom TypeConverter to use, overriding the default PropertyEditor mechanism. */
+	/** typeConverter 是一个自定义的类型转换器，用于在Bean创建和属性注入过程中进行类型转换。它可以覆盖Spring默认的PropertyEditor机制 */
 	private @Nullable TypeConverter typeConverter;
 
 	/** String resolvers to apply, for example, to annotation attribute values. */
@@ -1011,8 +1011,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	}
 
 	/**
-	 * Return the custom TypeConverter to use, if any.
-	 * @return the custom TypeConverter, or {@code null} if none specified
+	 * 返回要使用的自定义 TypeConverter（如果有）。
+	 * @return 自定义 TypeConverter，如果未指定则返回 {@code null}
 	 */
 	protected @Nullable TypeConverter getCustomTypeConverter() {
 		return this.typeConverter;

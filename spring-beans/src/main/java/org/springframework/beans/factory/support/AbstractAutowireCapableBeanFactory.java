@@ -1688,13 +1688,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
-	 * Apply the given property values, resolving any runtime references
-	 * to other beans in this bean factory. Must use deep copy, so we
-	 * don't permanently modify this property.
-	 * @param beanName the bean name passed for better exception information
-	 * @param mbd the merged bean definition
-	 * @param bw the BeanWrapper wrapping the target object
-	 * @param pvs the new property values
+	 * 将配置的属性值应用到 Bean 实例上，必须使用深拷。
+	 * @param beanName 为更好的异常信息而传递的 bean 名称
+	 * @param mbd MergeBeanDefinition
+	 * @param bw 包装目标对象的 BeanWrapper
+	 * @param pvs 新的属性值
 	 */
 	protected void applyPropertyValues(String beanName, BeanDefinition mbd, BeanWrapper bw, PropertyValues pvs) {
 		if (pvs.isEmpty()) {
@@ -1707,7 +1705,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		if (pvs instanceof MutablePropertyValues _mpvs) {
 			mpvs = _mpvs;
 			if (mpvs.isConverted()) {
-				// Shortcut: use the pre-converted values as-is.
+				// Shortcut：直接使用已转换的值，无需再次转换。
 				try {
 					bw.setPropertyValues(mpvs);
 					return;
