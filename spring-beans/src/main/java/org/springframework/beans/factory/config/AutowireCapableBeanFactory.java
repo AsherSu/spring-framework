@@ -385,18 +385,35 @@ public interface AutowireCapableBeanFactory extends BeanFactory {
 	@Nullable Object resolveDependency(DependencyDescriptor descriptor, @Nullable String requestingBeanName) throws BeansException;
 
 	/**
-	 * Resolve the specified dependency against the beans defined in this factory.
-	 * @param descriptor the descriptor for the dependency (field/method/constructor)
-	 * @param requestingBeanName the name of the bean which declares the given dependency
-	 * @param autowiredBeanNames a Set that all names of autowired beans (used for
-	 * resolving the given dependency) are supposed to be added to
-	 * @param typeConverter the TypeConverter to use for populating arrays and collections
-	 * @return the resolved object, or {@code null} if none found
-	 * @throws NoSuchBeanDefinitionException if no matching bean was found
-	 * @throws NoUniqueBeanDefinitionException if more than one matching bean was found
-	 * @throws BeansException if dependency resolution failed for any other reason
+	 * 解析指定的依赖项，通过在此工厂中定义的 beans 进行匹配。
+	 * <p>此方法尝试查找并返回一个合适的 bean 实例来满足给定的依赖描述符。
+	 * 依赖描述符可以表示字段、方法参数或构造函数参数中的依赖关系。
+	 *
+	 * DependencyDescriptor descriptor
+	 * 依赖描述符，包含了需要解析的依赖项的完整信息
+	 * 包括依赖的类型、泛型信息、注解（如 @Qualifier）、是否必需等
+	 * 可以表示字段、方法参数或构造函数参数的依赖
+	 * @Nullable String requestingBeanName
+	 * 请求该依赖的 bean 名称
+	 * 用于处理循环依赖检测和解决
+	 * 在依赖注入过程中提供上下文信息
+	 * 可以为 null（例如在非 Spring 管理的对象中使用时）
+	 * @Nullable Set<String> autowiredBeanNames
+	 * 用于收集参与自动装配的 bean 名称的集合
+	 * Spring 会将解析过程中使用的 bean 名称添加到此集合中
+	 * 主要用于依赖跟踪和调试目的
+	 * 可以为 null 如果不需要跟踪
+	 * @Nullable TypeConverter typeConverter
+	 * 类型转换器，用于在需要时进行类型转换
+	 * 当找到的 bean 类型与期望类型不完全匹配时使用
+	 * 如果为 null，将使用工厂的默认类型转换器
+	 * 支持自定义的类型转换逻辑
+	 * @return 满足依赖的 bean 实例，如果无法解析则返回 {@code null}
+	 * @throws NoSuchBeanDefinitionException 如果找不到匹配的 bean
+	 * @throws NoUniqueBeanDefinitionException 如果找到多个匹配的 bean 但无法确定唯一选择
+	 * @throws BeansException 如果在解析过程中发生其他错误
 	 * @since 2.5
-	 * @see DependencyDescriptor
+	 * @see #resolveDependency(DependencyDescriptor, String) 更简单的依赖解析方法
 	 */
 	@Nullable Object resolveDependency(DependencyDescriptor descriptor, @Nullable String requestingBeanName,
 			@Nullable Set<String> autowiredBeanNames, @Nullable TypeConverter typeConverter) throws BeansException;

@@ -1469,7 +1469,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			checkDependencies(beanName, mbd, filteredPds, pvs);
 		}
 
-		// 如果有属性值需要设置，调用applyPropertyValues方法应用这些属性值
+		// 调用applyPropertyValues方法应用这些属性值
 		if (pvs != null) {
 			applyPropertyValues(beanName, mbd, bw, pvs);
 		}
@@ -1688,7 +1688,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
-	 * 将配置的属性值应用到 Bean 实例上，必须使用深拷。
+	 * 将配置的属性值应用到 Bean 实例上，必须使用深拷贝。
 	 * @param beanName 为更好的异常信息而传递的 bean 名称
 	 * @param mbd MergeBeanDefinition
 	 * @param bw 包装目标对象的 BeanWrapper

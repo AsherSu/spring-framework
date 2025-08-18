@@ -1607,25 +1607,22 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	public @Nullable Object resolveDependency(DependencyDescriptor descriptor, @Nullable String requestingBeanName,
 											  @Nullable Set<String> autowiredBeanNames, @Nullable TypeConverter typeConverter) throws BeansException {
 
-		// 初始化参数名发现器，用于在后续依赖解析过程中获取方法/构造函数的参数名
+		// 初始化descriptor，用于在后续依赖解析过程中获取方法/构造函数的参数名
 		descriptor.initParameterNameDiscovery(getParameterNameDiscoverer());
 
 		// 当注入点的类型是 Optional 时，会将实际的依赖包装在 Optional 中
 		if (Optional.class == descriptor.getDependencyType()) {
 			return createOptionalDependency(descriptor, requestingBeanName);
 		}
-
 		// 这些类型用于延迟获取 Bean 实例，避免循环依赖或提供更灵活的 Bean 获取方式
 		else if (ObjectFactory.class == descriptor.getDependencyType() ||
 				ObjectProvider.class == descriptor.getDependencyType()) {
 			return new DependencyObjectProvider(descriptor, requestingBeanName);
 		}
-
 		// Provider 是 Java 依赖注入标准（javax.inject）中定义的延迟获取接口
 		else if (jakartaInjectProviderClass == descriptor.getDependencyType()) {
 			return new Jsr330Factory().createDependencyProvider(descriptor, requestingBeanName);
 		}
-
 		// 当依赖上标注了 @Lazy 注解时，Spring 会创建一个代理对象来延迟实际的 Bean 创建
 		else if (descriptor.supportsLazyResolution()) {
 			// 尝试从自动装配候选解析器中获取延迟解析的代理对象
