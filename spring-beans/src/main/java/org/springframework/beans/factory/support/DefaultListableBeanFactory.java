@@ -1938,53 +1938,68 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	}
 
 	/**
-	 * Find bean instances that match the required type.
-	 * Called during autowiring for the specified bean.
-	 * @param beanName the name of the bean that is about to be wired
-	 * @param requiredType the actual type of bean to look for
-	 * (may be an array component type or collection element type)
-	 * @param descriptor the descriptor of the dependency to resolve
-	 * @return a Map of candidate names and candidate instances that match
-	 * the required type (never {@code null})
-	 * @throws BeansException in case of errors
+	 * 查找与所需类型匹配的 bean 实例。
+	 * 在为指定 bean 进行自动装配时调用。
+	 * @param beanName 即将被装配的 bean 的名称
+	 * @param requiredType 要查找的 bean 的实际类型（可能是数组组件类型或集合元素类型）
+	 * @param descriptor 要解析的依赖项描述符
+	 * @return 包含匹配所需类型的候选名称和候选实例的 Map（永不为 {@code null}）
+	 * @throws BeansException 发生错误时抛出
 	 * @see #autowireByType
 	 * @see #autowireConstructor
 	 */
 	protected Map<String, Object> findAutowireCandidates(
 			@Nullable String beanName, Class<?> requiredType, DependencyDescriptor descriptor) {
 
+		// 获取所有与 requiredType 兼容的 bean 名称，包括祖先工厂中的 bean
 		String[] candidateNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 				this, requiredType, true, descriptor.isEager());
+		// 创建一个 LinkedHashMap 来存储候选结果，保持插入顺序
 		Map<String, Object> result = CollectionUtils.newLinkedHashMap(candidateNames.length);
+
+		// 首先检查工厂中已解析的依赖项（如 ApplicationContext、BeanFactory 等）
 		for (Map.Entry<Class<?>, Object> classObjectEntry : this.resolvableDependencies.entrySet()) {
 			Class<?> autowiringType = classObjectEntry.getKey();
+			// 如果当前可解析依赖的类型是 requiredType 的父类或接口
 			if (autowiringType.isAssignableFrom(requiredType)) {
 				Object autowiringValue = classObjectEntry.getValue();
+				// 解析自动装配值（例如处理 ObjectFactory）
 				autowiringValue = AutowireUtils.resolveAutowiringValue(autowiringValue, requiredType);
+				// 如果解析后的值是 requiredType 的实例，则将其添加到结果中
 				if (requiredType.isInstance(autowiringValue)) {
 					result.put(ObjectUtils.identityToString(autowiringValue), autowiringValue);
-					break;
+					break; // 找到匹配项后跳出循环
 				}
 			}
 		}
+
+		// 遍历所有候选 bean 名称
 		for (String candidate : candidateNames) {
+			// 排除自引用并且检查该 bean 是否为自动装配候选
 			if (!isSelfReference(beanName, candidate) && isAutowireCandidate(candidate, descriptor)) {
+				// 将符合条件的候选添加到结果中
 				addCandidateEntry(result, candidate, descriptor, requiredType);
 			}
 		}
+
+		// 如果在第一轮没有找到任何候选
 		if (result.isEmpty()) {
+			// 判断所需类型是否为数组、集合或 Map
 			boolean multiple = indicatesArrayCollectionOrMap(requiredType);
-			// Consider fallback matches if the first pass failed to find anything...
+			// 创建一个用于回退匹配的依赖描述符
 			DependencyDescriptor fallbackDescriptor = descriptor.forFallbackMatch();
+			// 再次遍历候选 bean 名称，考虑回退匹配
 			for (String candidate : candidateNames) {
+				// 排除自引用，检查回退匹配，并且如果是多元素类型则需要有 @Qualifier 注解
 				if (!isSelfReference(beanName, candidate) && isAutowireCandidate(candidate, fallbackDescriptor) &&
 						(!multiple || getAutowireCandidateResolver().hasQualifier(descriptor))) {
 					addCandidateEntry(result, candidate, descriptor, requiredType);
 				}
 			}
+			// 如果仍然没有找到候选并且不是多元素类型
 			if (result.isEmpty() && !multiple) {
-				// Consider self references as a final pass...
-				// but in the case of a dependency collection, not the very same bean itself.
+				// 最后考虑自引用作为候选
+				// 但如果依赖是一个集合，则不包括 bean 自身
 				for (String candidate : candidateNames) {
 					if (isSelfReference(beanName, candidate) &&
 							(!(descriptor instanceof MultiElementDescriptor) || !beanName.equals(candidate)) &&
@@ -1994,6 +2009,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				}
 			}
 		}
+		// 返回找到的所有候选
 		return result;
 	}
 

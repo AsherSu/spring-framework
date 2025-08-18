@@ -145,7 +145,16 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	/** typeConverter 是一个自定义的类型转换器，用于在Bean创建和属性注入过程中进行类型转换。它可以覆盖Spring默认的PropertyEditor机制 */
 	private @Nullable TypeConverter typeConverter;
 
-	/** String resolvers to apply, for example, to annotation attribute values. */
+	/** 字符串解析器列表，用于解析字符串值，例如注解属性值。
+	 * 占位符解析器 (Placeholder Resolvers)
+	 * 	- 解析 ${property.name} 形式的属性占位符，从配置文件、环境变量、系统属性中获取值
+	 * SpEL表达式解析器 (SpEL Expression Resolvers)
+	 * 	- 解析 #{expression} 形式的Spring表达式语言，支持复杂的表达式计算和Bean引用
+	 * 注解属性值解析器
+	 * 	- 解析注解中的字符串属性值，如 @Value("${config.value}") 中的占位符
+	 * 环境变量解析器
+	 * 	- 解析环境变量和系统属性，支持默认值设置
+	 */
 	private final List<StringValueResolver> embeddedValueResolvers = new CopyOnWriteArrayList<>();
 
 	/** 存储和管理beanPostProcessor的集合.
