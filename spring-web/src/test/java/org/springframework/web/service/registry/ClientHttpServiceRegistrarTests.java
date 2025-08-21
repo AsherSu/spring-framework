@@ -22,6 +22,9 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.type.AnnotationMetadata;
@@ -63,6 +66,13 @@ public class ClientHttpServiceRegistrarTests {
 				TestGroup.ofListing("echo", EchoClientA.class, EchoClientB.class));
 	}
 
+	@Test
+	void registerWhenNoClientsDoesNotCreateBeans() {
+		try (AnnotationConfigApplicationContext cxt = new AnnotationConfigApplicationContext(NoOpImportConfig.class)) {
+			assertThat(cxt.getBeanNamesForType(HttpServiceProxyRegistry.class)).isEmpty();
+		}
+	}
+
 	private void assertGroups(TestGroup... expectedGroups) {
 		Map<String, TestGroup> groupMap = this.groupRegistry.groupMap();
 		assertThat(groupMap.size()).isEqualTo(expectedGroups.length);
@@ -72,6 +82,20 @@ public class ClientHttpServiceRegistrarTests {
 			assertThat(actual.clientType()).isEqualTo(expected.clientType());
 			assertThat(actual.packageNames()).isEqualTo(expected.packageNames());
 			assertThat(actual.packageClasses()).isEqualTo(expected.packageClasses());
+		}
+	}
+
+
+	@Configuration(proxyBeanMethods = false)
+	@Import(NoOpRegistrar.class)
+	static class NoOpImportConfig {
+	}
+
+
+	static class NoOpRegistrar extends AbstractClientHttpServiceRegistrar {
+
+		@Override
+		protected void registerHttpServices(GroupRegistry registry, AnnotationMetadata metadata) {
 		}
 	}
 

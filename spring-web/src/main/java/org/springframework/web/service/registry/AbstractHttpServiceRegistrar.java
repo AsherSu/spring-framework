@@ -147,8 +147,11 @@ public abstract class AbstractHttpServiceRegistrar implements
 
 		registerHttpServices(new DefaultGroupRegistry(), metadata);
 
-		RootBeanDefinition proxyRegistryBeanDef = createOrGetRegistry(beanRegistry);
+		if (this.groupsMetadata.isEmpty()) {
+			return;
+		}
 
+		RootBeanDefinition proxyRegistryBeanDef = createOrGetRegistry(beanRegistry);
 		mergeGroups(proxyRegistryBeanDef);
 
 		this.groupsMetadata.forEachRegistration((groupName, types) -> types.forEach(type -> {
