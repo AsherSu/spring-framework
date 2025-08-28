@@ -16,13 +16,19 @@
 
 package org.springframework.http.client;
 
+import java.io.ByteArrayOutputStream;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.GZIPOutputStream;
+
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
+import okio.Buffer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.util.StringUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -105,6 +111,35 @@ public abstract class AbstractMockWebServerTests {
 				else if(request.getTarget().startsWith("/header/")) {
 					String headerName = request.getTarget().replace("/header/","");
 					return new MockResponse.Builder().body(headerName + ":" + request.getHeaders().get(headerName)).code(200).build();
+				}
+				else if(request.getTarget().startsWith("/compress/") && request.getBody() != null) {
+					String encoding = request.getTarget().replace("/compress/","");
+					String requestBody = request.getBody().utf8();
+					ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+					if (encoding.equals("gzip")) {
+						try(GZIPOutputStream gzipOutputStream = new GZIPOutputStream(outputStream)) {
+							gzipOutputStream.write(requestBody.getBytes());
+							gzipOutputStream.flush();
+						}
+					}
+					else if(encoding.equals("deflate")) {
+							try(DeflaterOutputStream deflaterOutputStream = new DeflaterOutputStream(outputStream)) {
+							deflaterOutputStream.write(requestBody.getBytes());
+							deflaterOutputStream.flush();
+						}
+					}
+					else {
+						outputStream.write(requestBody.getBytes());
+					}
+					Buffer buffer = new Buffer();
+					buffer.write(outputStream.toByteArray());
+					MockResponse.Builder builder = new MockResponse.Builder()
+							.body(buffer)
+							.code(200);
+					if (!encoding.isEmpty()) {
+						builder.setHeader(HttpHeaders.CONTENT_ENCODING, encoding);
+					}
+					return builder.build();
 				}
 				return new MockResponse.Builder().code(404).build();
 			}

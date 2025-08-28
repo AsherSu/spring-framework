@@ -24,10 +24,15 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandler;
+import java.net.http.HttpResponse.BodySubscriber;
+import java.net.http.HttpResponse.BodySubscribers;
+import java.net.http.HttpResponse.ResponseInfo;
 import java.net.http.HttpTimeoutException;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
@@ -38,6 +43,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.InflaterInputStream;
 
 import org.jspecify.annotations.Nullable;
 
@@ -60,6 +67,8 @@ class JdkClientHttpRequest extends AbstractStreamingClientHttpRequest {
 
 	private static final Set<String> DISALLOWED_HEADERS = disallowedHeaders();
 
+	private static final List<String> SUPPORTED_ENCODINGS = List.of("gzip", "deflate");
+
 
 	private final HttpClient httpClient;
 
@@ -71,15 +80,18 @@ class JdkClientHttpRequest extends AbstractStreamingClientHttpRequest {
 
 	private final @Nullable Duration timeout;
 
+	private final boolean compression;
 
-	public JdkClientHttpRequest(HttpClient httpClient, URI uri, HttpMethod method, Executor executor,
-			@Nullable Duration readTimeout) {
+
+	JdkClientHttpRequest(HttpClient httpClient, URI uri, HttpMethod method, Executor executor,
+			@Nullable Duration readTimeout, boolean compression) {
 
 		this.httpClient = httpClient;
 		this.uri = uri;
 		this.method = method;
 		this.executor = executor;
 		this.timeout = readTimeout;
+		this.compression = compression;
 	}
 
 
@@ -100,7 +112,7 @@ class JdkClientHttpRequest extends AbstractStreamingClientHttpRequest {
 		TimeoutHandler timeoutHandler = null;
 		try {
 			HttpRequest request = buildRequest(headers, body);
-			responseFuture = this.httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream());
+			responseFuture = this.httpClient.sendAsync(request, new DecompressingBodyHandler());
 
 			if (this.timeout != null) {
 				timeoutHandler = new TimeoutHandler(responseFuture, this.timeout);
@@ -151,6 +163,12 @@ class JdkClientHttpRequest extends AbstractStreamingClientHttpRequest {
 
 	private HttpRequest buildRequest(HttpHeaders headers, @Nullable Body body) {
 		HttpRequest.Builder builder = HttpRequest.newBuilder().uri(this.uri);
+
+		if (this.compression) {
+			if (!headers.containsHeader(HttpHeaders.ACCEPT_ENCODING)) {
+				headers.addAll(HttpHeaders.ACCEPT_ENCODING, SUPPORTED_ENCODINGS);
+			}
+		}
 
 		headers.forEach((headerName, headerValues) -> {
 			if (!DISALLOWED_HEADERS.contains(headerName.toLowerCase(Locale.ROOT))) {
@@ -237,7 +255,7 @@ class JdkClientHttpRequest extends AbstractStreamingClientHttpRequest {
 	/**
 	 * Temporary workaround to use instead of {@link HttpRequest.Builder#timeout(Duration)}
 	 * until <a href="https://bugs.openjdk.org/browse/JDK-8258397">JDK-8258397</a>
-	 * is fixed. Essentially, create a future wiht a timeout handler, and use it
+	 * is fixed. Essentially, create a future with a timeout handler, and use it
 	 * to close the response.
 	 * @see <a href="https://mail.openjdk.org/pipermail/net-dev/2021-October/016672.html">OpenJDK discussion thread</a>
 	 */
@@ -284,6 +302,38 @@ class JdkClientHttpRequest extends AbstractStreamingClientHttpRequest {
 		public void handleCancellationException(CancellationException ex) throws HttpTimeoutException {
 			if (this.timeout.get()) {
 				throw new HttpTimeoutException(ex.getMessage());
+			}
+		}
+	}
+
+	/**
+	 * BodyHandler that checks the Content-Encoding header and applies the appropriate decompression algorithm.
+	 * Supports Gzip and Deflate encoded responses.
+	 */
+	private static final class DecompressingBodyHandler implements BodyHandler<InputStream> {
+
+		@Override
+		public BodySubscriber<InputStream> apply(ResponseInfo responseInfo) {
+			String contentEncoding = responseInfo.headers().firstValue(HttpHeaders.CONTENT_ENCODING).orElse("");
+			if (contentEncoding.equalsIgnoreCase("gzip")) {
+				return BodySubscribers.mapping(
+						BodySubscribers.ofInputStream(),
+						(InputStream is) -> {
+							try {
+								return new GZIPInputStream(is);
+							}
+							catch (IOException ex) {
+								throw new UncheckedIOException(ex);
+							}
+						});
+			}
+			else if (contentEncoding.equalsIgnoreCase("deflate")) {
+				return BodySubscribers.mapping(
+						BodySubscribers.ofInputStream(),
+						InflaterInputStream::new);
+			}
+			else {
+				return BodySubscribers.ofInputStream();
 			}
 		}
 	}

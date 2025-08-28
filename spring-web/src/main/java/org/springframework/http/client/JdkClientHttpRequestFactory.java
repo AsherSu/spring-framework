@@ -43,6 +43,8 @@ public class JdkClientHttpRequestFactory implements ClientHttpRequestFactory {
 
 	private @Nullable Duration readTimeout;
 
+	private boolean compression = true;
+
 
 	/**
 	 * Create a new instance of the {@code JdkClientHttpRequestFactory}
@@ -96,10 +98,18 @@ public class JdkClientHttpRequestFactory implements ClientHttpRequestFactory {
 		this.readTimeout = readTimeout;
 	}
 
+	/**
+	 * Set whether support for uncompressing "gzip" and "deflate" HTTP responses is enabled.
+	 * @since 7.0
+	 */
+	public void enableCompression(boolean enable) {
+		this.compression = enable;
+	}
+
 
 	@Override
 	public ClientHttpRequest createRequest(URI uri, HttpMethod httpMethod) throws IOException {
-		return new JdkClientHttpRequest(this.httpClient, uri, httpMethod, this.executor, this.readTimeout);
+		return new JdkClientHttpRequest(this.httpClient, uri, httpMethod, this.executor, this.readTimeout, this.compression);
 	}
 
 }
