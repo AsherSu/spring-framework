@@ -179,7 +179,11 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	/** Optional OrderComparator for dependency Lists and arrays. */
 	private @Nullable Comparator<Object> dependencyComparator;
 
-	/** Resolver to use for checking if a bean definition is an autowire candidate. */
+	/** 用于检查bean定义是否为自动装配候选的解析器。 */
+	//候选资格检查 - 在第 1980 行和 1995 行的 isAutowireCandidate() 方法调用中使用，判断某个 bean 是否符合自动装配条件
+	//限定符匹配 - 在第 1996 行通过 hasQualifier() 方法检查是否存在 @Qualifier 注解匹配
+	//必需性判断 - 在第 1914 行的 isRequired() 方法中使用，确定依赖是否为必需的
+	//建议名称提供 - 在第 2065 行通过 getSuggestedName() 方法为依赖注入提供建议的 bean 名称
 	private AutowireCandidateResolver autowireCandidateResolver = SimpleAutowireCandidateResolver.INSTANCE;
 
 	/** Map from dependency type to corresponding autowired value. */
@@ -1637,6 +1641,19 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		return doResolveDependency(descriptor, requestingBeanName, autowiredBeanNames, typeConverter);
 	}
 
+	//这个方法的参数含义和作用如下：
+	//DependencyDescriptor descriptor
+	//含义：依赖描述符，包含了需要注入的依赖的详细信息
+	//作用：提供依赖的类型、注解信息、是否必需、字段/参数名等元数据，用于确定要注入什么类型的Bean
+	//@Nullable String beanName
+	//含义：请求依赖注入的Bean名称
+	//作用：标识是哪个Bean正在请求这个依赖，用于循环依赖检测、日志记录和异常信息
+	//@Nullable Set<String> autowiredBeanNames
+	//含义：存储所有被自动装配的Bean名称的集合
+	//作用：收集依赖解析过程中涉及的所有Bean名称，用于依赖关系追踪和管理
+	//@Nullable TypeConverter typeConverter
+	//含义：类型转换器
+	//作用：当找到的Bean类型与期望的注入类型不完全匹配时，用于进行类型转换
 	@SuppressWarnings("NullAway") // Dataflow analysis limitation
 	public @Nullable Object doResolveDependency(DependencyDescriptor descriptor, @Nullable String beanName,
 			@Nullable Set<String> autowiredBeanNames, @Nullable TypeConverter typeConverter) throws BeansException {
@@ -1644,7 +1661,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		// 设置当前线程的注入点，用于在解析过程中获取当前正在处理的注入点信息
 		InjectionPoint previousInjectionPoint = ConstructorResolver.setCurrentInjectionPoint(descriptor);
 		try {
-			// 步骤1: 尝试通过快捷方式解析依赖，例如通过 @Autowired 注解预解析的单个 Bean 匹配
+			// 步骤1: 对于已经解析过的单例Bean或配置值，直接从缓存返回，避免重复的类型匹配和候选筛选
+			// 适用场景：单例Bean的重复注入、@Value配置值、明确的类型匹配等
 			Object shortcut = descriptor.resolveShortcut(this);
 			if (shortcut != null) {
 				return shortcut;

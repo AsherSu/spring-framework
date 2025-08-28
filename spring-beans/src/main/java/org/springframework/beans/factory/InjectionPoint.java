@@ -29,24 +29,29 @@ import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
 /**
- * A simple descriptor for an injection point, pointing to a method/constructor
- * parameter or a field.
+ * 一个简单的注入点描述符，指向方法/构造函数参数或字段。
  *
- * <p>Exposed by {@link UnsatisfiedDependencyException}. Also available as an
- * argument for factory methods, reacting to the requesting injection point
- * for building a customized bean instance.
+ * <p>由 {@link UnsatisfiedDependencyException} 抛出。也可作为工厂方法的参数，
+ * 用于根据请求的注入点构建自定义的 bean 实例。
  *
  * @author Juergen Hoeller
  * @since 4.3
  * @see UnsatisfiedDependencyException#getInjectionPoint()
  * @see org.springframework.beans.factory.config.DependencyDescriptor
  */
+//精确定位：通过 Field 或 MethodParameter 对象准确描述注入发生的位置
+//错误诊断：当注入失败时，提供具体的错误位置信息
+//元数据访问：获取注入点的注解、类型等元信息
+//工厂方法支持：帮助工厂方法根据具体注入点创建合适的bean实例
 public class InjectionPoint {
 
+	/** 方法参数的描述符，用于描述注入点在方法或构造函数参数上的情况 */
 	protected @Nullable MethodParameter methodParameter;
 
+	/** 字段描述符，用于描述注入点在字段上的情况 */
 	protected @Nullable Field field;
 
+	/** 字段上的注解缓存，用于提高获取字段注解的性能 */
 	private volatile Annotation @Nullable [] fieldAnnotations;
 
 

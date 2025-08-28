@@ -38,36 +38,62 @@ import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.util.ObjectUtils;
 
 /**
- * Descriptor for a specific dependency that is about to be injected.
- * Wraps a constructor parameter, a method parameter or a field,
- * allowing unified access to their metadata.
+ * 描述一个即将被注入的特定依赖项。
+ * 封装构造函数参数、方法参数或字段，提供对它们元数据的统一访问。
  *
  * @author Juergen Hoeller
  * @since 2.5
  */
+//统一封装注入点：将构造函数参数、方法参数或字段进行统一封装，提供对它们元数据的统一访问接口
+//
+//依赖描述信息：存储和管理依赖注入所需的关键信息，包括：
+//声明类（declaringClass）
+//方法名和参数类型
+//字段名
+//是否必需（required）
+//是否急切加载（eager）
+//嵌套级别（nestingLevel）
+//类型解析：提供 ResolvableType 和 TypeDescriptor 的构建，支持复杂泛型类型的解析
+//
+//依赖解析策略：
+//resolveNotUnique() - 处理非唯一bean的场景
+//resolveShortcut() - 提供快捷解析路径
+//resolveCandidate() - 从工厂解析候选bean实例
+//序列化支持：实现了 Serializable 接口，支持依赖描述符的序列化和反序列化
 @SuppressWarnings("serial")
 public class DependencyDescriptor extends InjectionPoint implements Serializable {
 
+	/** 声明该依赖的类 */
 	private final Class<?> declaringClass;
 
+	/** 方法名（如果依赖是方法参数） */
 	private @Nullable String methodName;
 
+	/** 方法参数类型数组（如果依赖是方法参数） */
 	private Class<?> @Nullable [] parameterTypes;
 
+	/** 参数索引（如果依赖是方法参数） */
 	private int parameterIndex;
 
+	/** 字段名（如果依赖是字段） */
 	private @Nullable String fieldName;
 
+	/** 该依赖是否必需 */
 	private final boolean required;
 
+	/** 该依赖是否急切解析 */
 	private final boolean eager;
 
+	/** 嵌套级别，用于处理泛型集合等嵌套类型 */
 	private int nestingLevel = 1;
 
+	/** 依赖项包含的类，可能是子类 */
 	private @Nullable Class<?> containingClass;
 
+	/** 可解析类型，用于泛型类型解析 */
 	private transient volatile @Nullable ResolvableType resolvableType;
 
+	/** 类型描述符，用于类型转换和匹配 */
 	private transient volatile @Nullable TypeDescriptor typeDescriptor;
 
 
@@ -339,13 +365,13 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 	}
 
 	/**
-	 * 确定包装的参数/字段的声明（非泛型）类型。
+	 * 返回依赖项的参数/字段的声明（非泛型）类型。
 	 * @return 声明的类型（永不为 {@code null}）
 	 */
 	public Class<?> getDependencyType() {
 		if (this.field != null) {
 			if (this.nestingLevel > 1) {
-				Class<?> clazz = getResolvableType().getRawClass();
+				Class<?> clazz = getResolvableType().getRawClass();// 获取泛型的原始类Map.class
 				return (clazz != null ? clazz : Object.class);
 			}
 			else {

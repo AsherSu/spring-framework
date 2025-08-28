@@ -128,6 +128,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	private boolean cacheBeanMetadata = true;
 
 	/** Resolution strategy for expressions in bean definition values. */
+	//表达式解析：处理 Bean 定义中包含的 SpEL（Spring Expression Language）表达式
+	//动态值计算：在运行时计算表达式的值，而不是使用静态字符串
 	private @Nullable BeanExpressionResolver beanExpressionResolver;
 
 	/** Spring ConversionService to use instead of PropertyEditors. */
@@ -169,7 +171,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	/** Cache of pre-filtered post-processors. */
 	private @Nullable BeanPostProcessorCache beanPostProcessorCache;
 
-	/** Map from scope identifier String to corresponding Scope. */
+	/** 作用域标识符字符串到相应作用域的映射。 */
 	private final Map<String, Scope> scopes = new LinkedHashMap<>(8);
 
 	/** Application startup metrics. */
@@ -1053,6 +1055,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		return !this.embeddedValueResolvers.isEmpty();
 	}
 
+	//解析字符串中的嵌入式值（占位符和表达式）
 	@Override
 	public @Nullable String resolveEmbeddedValue(@Nullable String value) {
 		if (value == null) {
@@ -1832,12 +1835,12 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	}
 
 	/**
-	 * Evaluate the given String as contained in a bean definition,
-	 * potentially resolving it as an expression.
-	 * @param value the value to check
-	 * @param beanDefinition the bean definition that the value comes from
-	 * @return the resolved value
-	 * @see #setBeanExpressionResolver
+	 * 对 Bean 定义中包含的给定字符串进行求值，可能会将其解析为表达式。
+	 * 例如，处理像 "#{systemProperties.myProperty}" 这样的 Spring 表达式语言 (SpEL) 表达式。
+	 * @param value 要检查的字符串值，可能包含表达式
+	 * @param beanDefinition 该值来源的 Bean 定义
+	 * @return 解析后的值，如果无法解析则返回原始值或 null
+	 * @see #setBeanExpressionResolver 设置表达式解析器的方法
 	 */
 	protected @Nullable Object evaluateBeanDefinitionString(@Nullable String value, @Nullable BeanDefinition beanDefinition) {
 		// 如果没有配置表达式解析器，则直接返回原始值
@@ -1847,7 +1850,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		}
 
 		// 构建表达式求值的上下文环境
-			Scope scope = null;
+		Scope scope = null;
 		if (beanDefinition != null) {
 			// 从Bean定义中获取作用域名称（如singleton、prototype、session等）
 			String scopeName = beanDefinition.getScope();

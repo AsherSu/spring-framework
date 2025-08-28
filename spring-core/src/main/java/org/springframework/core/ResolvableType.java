@@ -1264,15 +1264,12 @@ public class ResolvableType implements Serializable {
 	}
 
 	/**
-	 * Return a {@code ResolvableType} for the specified {@link Field} with a given
-	 * implementation and the given nesting level.
-	 * <p>Use this variant when the class that declares the field includes generic
-	 * parameter variables that are satisfied by the implementation class.
-	 * @param field the source field
-	 * @param nestingLevel the nesting level (1 for the outer level; 2 for a nested
-	 * generic type; etc)
-	 * @param implementationClass the implementation class
-	 * @return a {@code ResolvableType} for the specified field
+	 * 为指定的 {@link Field} 返回一个 {@code ResolvableType}，并给定实现类和嵌套层级。
+	 * <p>当声明字段的类包含由实现类所满足的泛型参数变量时，使用此变体。
+	 * @param field 源字段
+	 * @param nestingLevel 嵌套层级（1 表示外层；2 表示嵌套的泛型类型，以此类推）
+	 * @param implementationClass 实现类
+	 * @return 指定字段的 {@code ResolvableType}
 	 * @see #forField(Field)
 	 */
 	public static ResolvableType forField(Field field, int nestingLevel, @Nullable Class<?> implementationClass) {
