@@ -85,8 +85,12 @@ public class AnnotatedBeanDefinitionReader {
 	public AnnotatedBeanDefinitionReader(BeanDefinitionRegistry registry, Environment environment) {
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
 		Assert.notNull(environment, "Environment must not be null");
+
+		// 初始化 BeanDefinitionRegistry 和 Environment
 		this.registry = registry;
 		this.conditionEvaluator = new ConditionEvaluator(registry, environment, null);
+
+		// 注册注解相关的后置处理器，以支持基于注解的组件扫描和 Bean 注册
 		AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 	}
 
@@ -250,19 +254,25 @@ public class AnnotatedBeanDefinitionReader {
 	private <T> void doRegisterBean(Class<T> beanClass, @Nullable String name,
 			Class<? extends Annotation> @Nullable [] qualifiers, @Nullable Supplier<T> supplier,
 			BeanDefinitionCustomizer @Nullable [] customizers) {
-
+		// 步骤1: 创建一个 AnnotatedGenericBeanDefinition，用于表示要注册的 Bean 的定义
 		AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(beanClass);
+		// 如果存在条件判断，根据条件结果决定是否注册 Bean
 		if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {
 			return;
 		}
-
 		abd.setAttribute(ConfigurationClassUtils.CANDIDATE_ATTRIBUTE, Boolean.TRUE);
+
+		// 设置 Bean 的实例提供者（supplier），用于创建 Bean 实例
 		abd.setInstanceSupplier(supplier);
+		// 解析 Bean 的作用域并设置，确定 Bean 的范围（Scope）
 		ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(abd);
 		abd.setScope(scopeMetadata.getScopeName());
+		// 生成或使用指定的 Bean 名称，如果没有指定名称，生成默认的 Bean 名称
 		String beanName = (name != null ? name : this.beanNameGenerator.generateBeanName(abd, this.registry));
 
+		// 步骤2: 处理常见的 Bean 定义注解，如 @Lazy、@Primary 等
 		AnnotationConfigUtils.processCommonDefinitionAnnotations(abd);
+		// 处理 Bean 的限定符（qualifiers），如 @Qualifier 注解
 		if (qualifiers != null) {
 			for (Class<? extends Annotation> qualifier : qualifiers) {
 				if (Primary.class == qualifier) {
@@ -279,12 +289,13 @@ public class AnnotatedBeanDefinitionReader {
 				}
 			}
 		}
+		// 自定义 Bean 定义，如果有自定义操作的话
 		if (customizers != null) {
 			for (BeanDefinitionCustomizer customizer : customizers) {
 				customizer.customize(abd);
 			}
 		}
-
+		// 步骤3: 将 Bean 注册到 Spring 容器中，使其成为容器管理的 Bean
 		BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
 		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 		BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);

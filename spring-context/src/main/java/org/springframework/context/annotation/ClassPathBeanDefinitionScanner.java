@@ -162,10 +162,15 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
 		this.registry = registry;
 
+		// 如果需要使用默认过滤器，注册默认过滤器
 		if (useDefaultFilters) {
 			registerDefaultFilters();
 		}
+
+		// 设置环境信息
 		setEnvironment(environment);
+
+		// 设置资源加载器（ResourceLoader）
 		setResourceLoader(resourceLoader);
 	}
 
@@ -249,15 +254,18 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 * @return number of beans registered
 	 */
 	public int scan(String... basePackages) {
+		// 记录扫描开始时的 BeanDefinition 数量
 		int beanCountAtScanStart = this.registry.getBeanDefinitionCount();
 
+		// 步骤1: 执行扫描操作
 		doScan(basePackages);
 
-		// Register annotation config processors, if necessary.
+		// 步骤2: 注册注解配置处理器（如果需要的话）
 		if (this.includeAnnotationConfig) {
 			AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 		}
 
+		// 返回扫描后的 BeanDefinition 数量与扫描开始前的数量的差，表示扫描期间注册的新 BeanDefinition 数量
 		return (this.registry.getBeanDefinitionCount() - beanCountAtScanStart);
 	}
 
@@ -273,19 +281,31 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
 		for (String basePackage : basePackages) {
+			// 步骤1: 查找符合条件的 BeanDefinition 候选类
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
 			for (BeanDefinition candidate : candidates) {
+
+				// 步骤2: 解析 Bean 的作用域信息
 				ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
 				candidate.setScope(scopeMetadata.getScopeName());
+
+				// 步骤3: 生成 Bean 的名称
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
+
+				// 步骤4: 设置一些通用的注解和
 				if (candidate instanceof AbstractBeanDefinition abstractBeanDefinition) {
 					postProcessBeanDefinition(abstractBeanDefinition, beanName);
 				}
+
+				// 步骤5: 将通用的注解设置到bd
 				if (candidate instanceof AnnotatedBeanDefinition annotatedBeanDefinition) {
 					AnnotationConfigUtils.processCommonDefinitionAnnotations(annotatedBeanDefinition);
 				}
+
+				// 步骤6: 注册BeanDefinition
 				if (checkCandidate(beanName, candidate)) {
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
+					// 步骤7: 根据作用域信息，应用作用域代理模式
 					definitionHolder =
 							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);

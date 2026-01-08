@@ -125,7 +125,7 @@ public abstract class AnnotationConfigUtils {
 
 
 	/**
-	 * Register all relevant annotation post processors in the given registry.
+	 * 在给定的注册表中 注册所有相关的注解后置处理器。
 	 * @param registry the registry to operate on
 	 */
 	public static void registerAnnotationConfigProcessors(BeanDefinitionRegistry registry) {
@@ -143,24 +143,33 @@ public abstract class AnnotationConfigUtils {
 	public static Set<BeanDefinitionHolder> registerAnnotationConfigProcessors(
 			BeanDefinitionRegistry registry, @Nullable Object source) {
 
+		// 1. 如果 BeanDefinitionRegistry 是 DefaultListableBeanFactory 的实例，执行以下操作
 		DefaultListableBeanFactory beanFactory = unwrapDefaultListableBeanFactory(registry);
 		if (beanFactory != null) {
+			// 1.1 检查当前的依赖比较器是否是 AnnotationAwareOrderComparator 的实例，
+			// 如果不是，设置依赖比较器为 AnnotationAwareOrderComparator.INSTANCE，用于处理注解驱动排序。
 			if (!(beanFactory.getDependencyComparator() instanceof AnnotationAwareOrderComparator)) {
 				beanFactory.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);
 			}
+			// 1.2 检查当前的自动装配候选解析器是否是 ContextAnnotationAutowireCandidateResolver 的实例，如果不是，设置自动装配候选解析器
 			if (!(beanFactory.getAutowireCandidateResolver() instanceof ContextAnnotationAutowireCandidateResolver)) {
 				beanFactory.setAutowireCandidateResolver(new ContextAnnotationAutowireCandidateResolver());
 			}
 		}
 
+		// 2. 创建一个空的 LinkedHashSet 用于存储将要注册的 Bean 定义。
 		Set<BeanDefinitionHolder> beanDefs = CollectionUtils.newLinkedHashSet(6);
 
+		// 3. 检查是否已经注册了名为 CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME 的 Bean 定义。
+		// 如果没有，创建一个 ConfigurationClassPostProcessor 类型的 Bean 定义，并将其添加到 BeanDefinitionRegistry 中。
 		if (!registry.containsBeanDefinition(CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME)) {
 			RootBeanDefinition def = new RootBeanDefinition(ConfigurationClassPostProcessor.class);
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME));
 		}
 
+		// 4. 检查是否已经注册了名为 AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME 的 Bean 定义。
+		// 如果没有，创建一个 AutowiredAnnotationBeanPostProcessor 类型的 Bean 定义，并将其添加到 BeanDefinitionRegistry 中。
 		if (!registry.containsBeanDefinition(AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME)) {
 			RootBeanDefinition def = new RootBeanDefinition(AutowiredAnnotationBeanPostProcessor.class);
 			def.setSource(source);
@@ -229,6 +238,7 @@ public abstract class AnnotationConfigUtils {
 	}
 
 	static void processCommonDefinitionAnnotations(AnnotatedBeanDefinition abd, AnnotatedTypeMetadata metadata) {
+		// 处理 @Lazy 注解
 		AnnotationAttributes lazy = attributesFor(metadata, Lazy.class);
 		if (lazy != null) {
 			abd.setLazyInit(lazy.getBoolean("value"));
@@ -240,26 +250,35 @@ public abstract class AnnotationConfigUtils {
 			}
 		}
 
+		// 处理 @Primary 注解
 		if (metadata.isAnnotated(Primary.class.getName())) {
 			abd.setPrimary(true);
 		}
+
+		// 处理 @Fallback 注解
 		if (metadata.isAnnotated(Fallback.class.getName())) {
 			abd.setFallback(true);
 		}
+
+		// 处理 @DependsOn 注解
 		AnnotationAttributes dependsOn = attributesFor(metadata, DependsOn.class);
 		if (dependsOn != null) {
 			abd.setDependsOn(dependsOn.getStringArray("value"));
 		}
 
+		// 处理 @Role 注解
 		AnnotationAttributes role = attributesFor(metadata, Role.class);
 		if (role != null) {
 			abd.setRole(role.getNumber("value").intValue());
 		}
+
+		// 处理 @Description 注解
 		AnnotationAttributes description = attributesFor(metadata, Description.class);
 		if (description != null) {
 			abd.setDescription(description.getString("value"));
 		}
 
+		// 解析和处理 Bean 定义上的 @Proxyable 注解
 		AnnotationAttributes proxyable = attributesFor(metadata, Proxyable.class);
 		if (proxyable != null) {
 			ProxyType mode = proxyable.getEnum("value");

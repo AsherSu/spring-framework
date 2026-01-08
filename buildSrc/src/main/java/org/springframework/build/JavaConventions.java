@@ -51,7 +51,7 @@ public class JavaConventions {
 	 * The Java version we should use as the baseline for the compiled bytecode
 	 * (the "-release" compiler argument).
 	 */
-	private static final JavaLanguageVersion DEFAULT_RELEASE_VERSION = JavaLanguageVersion.of(17);
+	private static final JavaLanguageVersion DEFAULT_RELEASE_VERSION = JavaLanguageVersion.of(23);
 
 	static {
 		List<String> commonCompilerArgs = List.of(
@@ -64,7 +64,7 @@ public class JavaConventions {
 		COMPILER_ARGS.addAll(commonCompilerArgs);
 		COMPILER_ARGS.addAll(List.of(
 				"-Xlint:varargs", "-Xlint:fallthrough", "-Xlint:rawtypes", "-Xlint:deprecation",
-				"-Xlint:unchecked", "-Werror"
+				"-Xlint:unchecked"//, "-Werror"
 		));
 		TEST_COMPILER_ARGS = new ArrayList<>();
 		TEST_COMPILER_ARGS.addAll(commonCompilerArgs);

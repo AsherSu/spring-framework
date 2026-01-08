@@ -215,8 +215,11 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 */
 	@SuppressWarnings("unchecked")
 	protected void registerDefaultFilters() {
+		// 向 includeFilters 集合中添加默认的过滤器
 		this.includeFilters.add(new AnnotationTypeFilter(Component.class));
 		ClassLoader cl = ClassPathScanningCandidateComponentProvider.class.getClassLoader();
+
+		// 尝试注册 JSR-250 'jakarta.inject.Named' 过滤器（如果可用）
 		try {
 			this.includeFilters.add(new AnnotationTypeFilter(
 					((Class<? extends Annotation>) ClassUtils.forName("jakarta.inject.Named", cl)), false));
@@ -416,13 +419,18 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	}
 
 	private Set<BeanDefinition> scanCandidateComponents(String basePackage) {
+		// 创建一个用于存储候选 BeanDefinition 的集合
 		Set<BeanDefinition> candidates = new LinkedHashSet<>();
 		try {
+			// 构建包搜索路径，使用类路径前缀和解析的基本包路径 classpath*:org/springframework/spring_reading/My/**/*.class
 			String packageSearchPath = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
 					resolveBasePackage(basePackage) + '/' + this.resourcePattern;
+			// 获取资源模式解析器的资源数组 E:/project/java/spring-framework/spring-context/build/classes/java/main/org/springframework/spring_reading/My/MyBean.class
 			Resource[] resources = getResourcePatternResolver().getResources(packageSearchPath);
+			// 检查日志级别是否开启跟踪和调试
 			boolean traceEnabled = logger.isTraceEnabled();
 			boolean debugEnabled = logger.isDebugEnabled();
+			// 遍历资源数组，查找候选 BeanDefinition
 			for (Resource resource : resources) {
 				String filename = resource.getFilename();
 				if (filename != null && filename.contains(ClassUtils.CGLIB_CLASS_SEPARATOR)) {
@@ -497,8 +505,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	}
 
 	/**
-	 * Determine whether the given class does not match any exclude filter
-	 * and does match at least one include filter.
+	 * 确定给定类别不匹配任何排除过滤器，且匹配至少一个包含过滤器。
 	 * @param metadataReader the ASM ClassReader for the class
 	 * @return whether the class qualifies as a candidate component
 	 */

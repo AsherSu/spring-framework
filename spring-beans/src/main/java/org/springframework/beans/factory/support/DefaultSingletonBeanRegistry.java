@@ -194,6 +194,10 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 
 	@Override
 	public @Nullable Object getSingleton(String beanName) {
+		// 调用重载的getSingleton方法来获取单例bean。
+		// 参数说明：
+		// 1. beanName: 要获取的单例bean的名称。
+		// 2. true: 表示如果当前bean正在创建中（例如处理循环引用的情况），则允许返回早期的单例bean引用。
 		return getSingleton(beanName, true);
 	}
 
@@ -205,14 +209,14 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * @return 已注册的单例对象 或者 早期单例bean，如果未找到，则为 {@code null}
 	 */
 	protected @Nullable Object getSingleton(String beanName, boolean allowEarlyReference) {
-		// 在获取单例时，先尝试直接从缓存（singletonObjects）中读取已有实例，
-		// 避免每次都获取和释放 singletonLock 的性能开销；只有缓存未命中且该
-		// bean 正在创建时，才会进入完整的加锁和早期引用逻辑
+		// 尝试从缓存中快速检索已存在的bean实例，避免完全锁定单例
 		Object singletonObject = this.singletonObjects.get(beanName);
-		// 如果缓存未命中且该 bean 正在创建中，则尝试从 earlySingletonObjects 中获取，
+
+		// 如果找不到实例，并且该bean当前正在创建中（例如，处理循环引用）
 		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
 			singletonObject = this.earlySingletonObjects.get(beanName);
-			// 如果仍然未找到，且允许早期引用，则尝试从 singletonFactories 中获取
+
+			// 如果允许提前引用并且在早期单例对象中仍未找到
 			if (singletonObject == null && allowEarlyReference) {
 				// 加锁创建早期引用（earlySingletonObjects 被实例化但是未完成注入，前后置的方法等）时，避免在单例锁中阻塞其他线程，
 				synchronized (this.singletonObjects) {
