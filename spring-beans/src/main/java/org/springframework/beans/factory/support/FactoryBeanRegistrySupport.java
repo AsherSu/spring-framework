@@ -124,24 +124,6 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	 * @throws BeanCreationException 如果在创建 FactoryBean 对象时发生错误
 	 * @see org.springframework.beans.factory.FactoryBean#getObject()
 	 */
-	/**
-	 * 从给定的 FactoryBean 中获取要暴露的对象实例。
-	 * <p>该方法会根据 FactoryBean 是否为单例 以及 是否已经存在对应的单例实例 来决定如何获取对象：
-	 * <ul>
-	 *   <li>如果是单例且已存在对应的单例 bean，则尝试从缓存中获取或创建并缓存对象实例。</li>
-	 *   <li>如果需要后处理（post-processing），还会对获取到的对象进行后处理操作。</li>
-	 *   <li>对于原型（prototype）或其他非单例 FactoryBean，则直接创建新实例并根据需要进行后处理。</li>
-	 * </ul>
-	 * @param factory FactoryBean 实例
-	 * @param requiredType 期望获取的对象类型，可以为 null
-	 * @param beanName 规范 beanName
-	 * @param shouldPostProcess 是否需要对获取到的对象进行后处理
-	 *  BeanPostProcessor.postProcessBeforeInitialization() - 初始化前处理
-	 *  BeanPostProcessor.postProcessAfterInitialization() - 初始化后处理
-	 * @return 从 FactoryBean 获取到的对象实例
-	 * @throws BeanCreationException 如果在创建 FactoryBean 对象时发生错误
-	 * @see org.springframework.beans.factory.FactoryBean#getObject()
-	 */
 	protected Object getObjectFromFactoryBean(FactoryBean<?> factory, @Nullable Class<?> requiredType,
 			String beanName, boolean shouldPostProcess) {
 

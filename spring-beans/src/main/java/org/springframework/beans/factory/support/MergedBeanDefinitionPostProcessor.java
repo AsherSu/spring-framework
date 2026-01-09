@@ -18,6 +18,8 @@ package org.springframework.beans.factory.support;
 
 import org.springframework.beans.factory.config.BeanPostProcessor;
 
+// Bean 定义合并之后，实例化刚完成之后，属性注入之前。
+
 /**
  * Post-processor callback interface for <i>merged</i> bean definitions at runtime.
  * {@link BeanPostProcessor} implementations may implement this sub-interface in order

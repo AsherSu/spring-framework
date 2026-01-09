@@ -255,25 +255,6 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @return bean 的实例
 	 * @throws BeansException，如果无法创建 bean
 	 */
-	//1. 缓存单例分支
-	//   - 条件：`sharedInstance != null && args == null`
-	//   - 返回：读取已缓存的单例或早期引用并调用 `getObjectForBeanInstance`
-	//
-	//2. 原型循环检测分支
-	//   - 条件：`isPrototypeCurrentlyInCreation(beanName)`
-	//   - 返回：抛出 `BeanCurrentlyInCreationException`
-	//
-	//3. 委托父工厂分支
-	//   - 条件：`parentBeanFactory != null && !containsBeanDefinition(beanName)`
-	//   - 返回：调用父工厂的 `doGetBean` 或 `getBean`
-	//
-	//4. 本地创建分支
-	//   - 标记创建：`!typeCheckOnly` 时执行 `markBeanAsCreated`
-	//   - 加载合并定义：`getMergedLocalBeanDefinition`
-	//   - 根据作用域创建：
-	//     - 单例（`mbd.isSingleton()`）
-	//     - 原型（`mbd.isPrototype()`）
-	//     - 自定义作用域（其它 `scope`）
 	@SuppressWarnings("unchecked")
 	protected <T> T doGetBean(
 			String name, @Nullable Class<T> requiredType, @Nullable Object @Nullable [] args, boolean typeCheckOnly)
@@ -349,15 +330,19 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				String[] dependsOn = mbd.getDependsOn();
 				if (dependsOn != null) {
 					for (String dep : dependsOn) {
-						// 检测循环依赖，如果 dep->beanName 则存在循环依赖
+						// 步骤7.1: 是否存在循环依赖
+						// 它首先检查是否存在循环依赖，这意味着Bean A依赖Bean B，而Bean B又依赖Bean A。
+						// 如果存在这样的情况它会抛出一个BeanCreationException异常。
 						if (isDependent(beanName, dep)) {
 							throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 									"Circular depends-on relationship between '" + beanName + "' and '" + dep + "'");
 						}
-						// 注册依赖关系
+						// 步骤7.2: 注册Bean与Bean之间的依赖关系
+						// 当前的Bean工厂中注册bean之间的依赖关系。这样，当获取或销毁bean时，Spring可以保持正确的顺序。
 						registerDependentBean(dep, beanName);
 						try {
-							// 初始化依赖的bean
+							// 步骤7.3: 获取被依赖的Bean对象
+							// 确保每个被依赖的bean都已经被创建。这是通过直接调用getBean方法完成的，该方法负责初始化并返回指定的bean。
 							getBean(dep);
 						}
 						catch (NoSuchBeanDefinitionException ex) {
@@ -1146,7 +1131,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 						// 添加到实例化感知处理器缓存列表
 						bppCache.instantiationAware.add(instantiationAwareBpp);
 
-						// 嵌套类型检查：智能实例化感知处理器
+						// 添加到智能实例化感知处理器列表
 						if (bpp instanceof SmartInstantiationAwareBeanPostProcessor smartInstantiationAwareBpp) {
 							// 添加到智能实例化感知处理器缓存列表
 							bppCache.smartInstantiationAware.add(smartInstantiationAwareBpp);
@@ -1508,11 +1493,15 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @throws BeanDefinitionStoreException 如果 bean 定义存储出现问题（例如格式错误）
 	 */
 	protected RootBeanDefinition getMergedLocalBeanDefinition(String beanName) throws BeansException {
-		// 检查缓存是否存在且可用
+		// 1. 快速从map中检查bean定义，这样做可以最小化锁定。
 		RootBeanDefinition mbd = this.mergedBeanDefinitions.get(beanName);
+
+		// 2. 如果合并的bean定义存在并且没有过期，直接返回它。
 		if (mbd != null && !mbd.stale) {
 			return mbd;
 		}
+
+		// 3. 如果上述检查失败，进一步获取并返回合并的bean定义。
 		return getMergedBeanDefinition(beanName, getBeanDefinition(beanName));
 	}
 
@@ -1527,6 +1516,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	protected RootBeanDefinition getMergedBeanDefinition(String beanName, BeanDefinition bd)
 			throws BeanDefinitionStoreException {
 
+		// 为给定的Bean名称和Bean定义获取一个合并的RootBeanDefinition，
+		// 由于这个版本的方法没有提供一个父Bean定义，所以我们传递null作为第三个参数。
 		return getMergedBeanDefinition(beanName, bd, null);
 	}
 
@@ -1544,18 +1535,20 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			String beanName, BeanDefinition bd, @Nullable BeanDefinition containingBd)
 			throws BeanDefinitionStoreException {
 
+		// 1. 对mergedBeanDefinitions进行同步以确保线程安全。
 		synchronized (this.mergedBeanDefinitions) {
 			RootBeanDefinition mbd = null;
 			RootBeanDefinition previous = null;
 
-			// 获取缓存的合并后的 RootBeanDefinition
+			// 2. 在完整的锁定中检查，以确保使用相同的合并实例
 			if (containingBd == null) {
 				mbd = this.mergedBeanDefinitions.get(beanName);
 			}
 
+			// 3. 如果bean定义未被合并或已过期，进行合并操作。
 			if (mbd == null || mbd.stale) {
 				previous = mbd;
-				// 没有 父beanDefinition,当前bd为顶级bd，直接创建rootbd
+				// 没有 父beanDefinition
 				if (bd.getParentName() == null) {
 					if (bd instanceof RootBeanDefinition rootBeanDef) {
 						mbd = rootBeanDef.cloneBeanDefinition();
@@ -1564,7 +1557,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 						mbd = new RootBeanDefinition(bd);
 					}
 				}
-				// 存在父bd，合并生成mbd
+				// 5. 处理有父定义的情况：需要与父定义合并。
 				else {
 					BeanDefinition pbd;
 					try {
@@ -1596,39 +1589,29 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					mbd.overrideFrom(bd);
 				}
 
-				// 可能存在配置时，未说明作用域的情况，默认单例
+				// 6. 如果bean定义的范围没有明确设置，将其默认为单例。
 				if (!StringUtils.hasLength(mbd.getScope())) {
 					mbd.setScope(SCOPE_SINGLETON);
 				}
 
-				// 1、存在外部Bean定义 (containingBd != null)
-				// 2、外部Bean是非单例的 (!containingBd.isSingleton())
-				// 3、当前Bean是单例的 (mbd.isSingleton())
+				// 7. 非单例bean中的bean不能是单例。在这里修复这种情况。
 				if (containingBd != null && !containingBd.isSingleton() && mbd.isSingleton()) {
-					// 将当前 Bean 定义的作用域设置为与外部 Bean
 					mbd.setScope(containingBd.getScope());
 				}
 
-				// 暂时缓存合并后的 bean 定义
-				//（之后仍可能重新合并，以获取元数据的变更）
+				// 8. 如果需要，缓存合并后的bean定义。
 				if (containingBd == null && (isCacheBeanMetadata() || isBeanEligibleForMetadataCaching(beanName))) {
-					// 优化性能，复用以下缓存的元数据：
-					// 已解析的构造函数
-					// 已解析的工厂方法
-					// 目标类型信息
-					// 其他与类结构相关但不会因配置变更而改变的元数据
 					cacheMergedBeanDefinition(mbd, beanName);
 				}
 			}
 
-			// 例如当 BeanDefinition 因为某些原因被标记为过期时：
-			// 1. 父子关系发生变化
-			// 2. 作用域发生变化
-			// 3. 其他配置属性发生变化
+			// 9. 如果之前存在一个bean定义，复制相关的缓存。
 			if (previous != null) {
 				// 在一定情况下，使用之前的缓存 减少反射造成的资源消耗
 				copyRelevantMergedBeanDefinitionCaches(previous, mbd);
 			}
+
+			// 10. 返回合并后的bean定义。
 			return mbd;
 		}
 	}
@@ -2051,7 +2034,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @param name 命名可能包含工厂取消引用前缀的名称 factoryBean 包含&为前缀
 	 * @param beanName 规范的 beanName
 	 * @param mbd
-	 * @return 要为 bean 公开的���象
+	 * @return 要为 bean 公开的对象
 	 */
 	protected Object getObjectForBeanInstance(Object beanInstance, @Nullable Class<?> requiredType,
 			String name, String beanName, @Nullable RootBeanDefinition mbd) {
@@ -2322,12 +2305,16 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 */
 	static class BeanPostProcessorCache {
 
+		// 实例化感知的后处理器
 		final List<InstantiationAwareBeanPostProcessor> instantiationAware = new ArrayList<>();
 
+		// 智能实例化感知的后处理器
 		final List<SmartInstantiationAwareBeanPostProcessor> smartInstantiationAware = new ArrayList<>();
 
+		// 销毁感知的后处理器
 		final List<DestructionAwareBeanPostProcessor> destructionAware = new ArrayList<>();
 
+		// 合并 Bean 定义的后处理器
 		final List<MergedBeanDefinitionPostProcessor> mergedDefinition = new ArrayList<>();
 	}
 

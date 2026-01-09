@@ -18,6 +18,8 @@ package org.springframework.beans.factory.config;
 
 import org.springframework.beans.BeansException;
 
+// Bean 销毁前
+
 /**
  * Subinterface of {@link BeanPostProcessor} that adds a before-destruction callback.
  *

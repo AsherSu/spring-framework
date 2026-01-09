@@ -127,7 +127,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	/** Resolver strategy for method parameter names. */
 	private @Nullable ParameterNameDiscoverer parameterNameDiscoverer = new DefaultParameterNameDiscoverer();
 
-	/** Whether to automatically try to resolve circular references between beans. */
+	/** 是否处理循环依赖 */
 	private boolean allowCircularReferences = true;
 
 	/**
@@ -491,6 +491,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		if (logger.isTraceEnabled()) {
 			logger.trace("Creating instance of bean '" + beanName + "'");
 		}
+		// 对mbd进行一些预处理，这可能包括克隆bean定义，如果mbd是非共享的原型。
 		RootBeanDefinition mbdToUse = mbd;
 
 		// 确保在此时已经解析了Bean的类，如果是动态解析的Class，
@@ -509,7 +510,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		try {
-			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
+			// 步骤1: 尝试使用InstantiationAwareBeanPostProcessors来实例化bean。
+			// 如果后处理器产生bean实例（例如通过AOP代理），则直接返回该实例。
 			Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
 			if (bean != null) {
 				return bean;
@@ -551,6 +553,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * @see #instantiateUsingFactoryMethod
 	 * @see #autowireConstructor
 	 */
+	// 从bean的实例化、属性注入、初始化，到bean的清理注册
 	protected Object doCreateBean(String beanName, RootBeanDefinition mbd, @Nullable Object @Nullable [] args)
 			throws BeanCreationException {
 
@@ -559,6 +562,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		if (mbd.isSingleton()) {
 			instanceWrapper = this.factoryBeanInstanceCache.remove(beanName);
 		}
+
+		// 步骤1: 尝试实例化bean
 		if (instanceWrapper == null) {
 			instanceWrapper = createBeanInstance(beanName, mbd, args);
 		}
@@ -568,7 +573,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			mbd.resolvedTargetType = beanType;
 		}
 
-		// Allow post-processors to modify the merged bean definition.
+		// 步骤2: 合并bean定义的后置处理
 		synchronized (mbd.postProcessingLock) {
 			if (!mbd.postProcessed) {
 				try {
@@ -582,8 +587,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 		}
 
-		// Eagerly cache singletons to be able to resolve circular references
-		// even when triggered by lifecycle interfaces like BeanFactoryAware.
+		// 步骤3: 处理可能的循环引用，通过提前暴露bean的引用
 		boolean earlySingletonExposure = (mbd.isSingleton() && this.allowCircularReferences &&
 				isSingletonCurrentlyInCreation(beanName));
 		if (earlySingletonExposure) {
@@ -594,7 +598,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
 
-		// Initialize the bean instance.
+		// 步骤4: 初始化bean实例，填充bean属性并应用后处理器
 		Object exposedObject = bean;
 		try {
 			populateBean(beanName, mbd, instanceWrapper);
@@ -636,7 +640,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 		}
 
-		// Register bean as disposable.
+		// // Step 5: 如果需要，注册bean以便在容器关闭时进行清理
 		try {
 			registerDisposableBeanIfNecessary(beanName, bean, mbd);
 		}
@@ -667,12 +671,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
-	 * Determine the target type for the given bean definition.
-	 * @param beanName the name of the bean (for error handling purposes)
-	 * @param mbd the merged bean definition for the bean
-	 * @param typesToMatch the types to match in case of internal type matching purposes
-	 * (also signals that the returned {@code Class} will never be exposed to application code)
-	 * @return the type for the bean if determinable, or {@code null} otherwise
+	 * 确定给定 bean 定义的目标类型。
+	 * @param beanName bean 的名称（用于错误处理目的）
+	 * @param mbd bean 的合并 bean 定义
+	 * @param typesToMatch 在内部类型匹配的情况下要匹配的类型
+	 *（也表明返回的 {@code Class} 永远不会暴露给应用程序代码）
+	 * @return Bean的类型（如果可以确定的话），否则返回{@code null}
 	 */
 	protected @Nullable Class<?> determineTargetType(String beanName, RootBeanDefinition mbd, Class<?>... typesToMatch) {
 		Class<?> targetType = mbd.getTargetType();
@@ -1114,22 +1118,35 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
-	 * Apply before-instantiation post-processors, resolving whether there is a
-	 * before-instantiation shortcut for the specified bean.
-	 * @param beanName the name of the bean
-	 * @param mbd the bean definition for the bean
-	 * @return the shortcut-determined bean instance, or {@code null} if none
+	 * 此方法尝试通过 {@link InstantiationAwareBeanPostProcessor}
+	 * 在实际实例化 bean 之前创建 bean 的代理或其他替代实例。
+	 * 如果任何后处理器返回非空对象,则跳过常规 bean 实例化过程。
+	 * @param beanName bean 的名称
+	 * @param mbd bean 的定义
+	 * @return 快捷方式确定的 bean 实例,如果没有则返回 {@code null}
 	 */
 	@SuppressWarnings("deprecation")
 	protected @Nullable Object resolveBeforeInstantiation(String beanName, RootBeanDefinition mbd) {
+		// 初始化一个bean变量，它可能会被后续的处理过程赋值
 		Object bean = null;
+
+		// 检查'beforeInstantiationResolved'属性是否为FALSE。如果是FALSE，则跳过后续的处理
 		if (!Boolean.FALSE.equals(mbd.beforeInstantiationResolved)) {
-			// Make sure bean class is actually resolved at this point.
+
+			// 首先，确保此时的bean类已经被解析。
+			// 然后，对于非合成的bean，并且如果有任何InstantiationAwareBeanPostProcessors，尝试进行前置处理。
 			if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
+
+				// 确定目标类型。这可能涉及到类的解析和其他初始化操作。
 				Class<?> targetType = determineTargetType(beanName, mbd);
+
 				if (targetType != null) {
+					// 如果确定了目标类型，首先执行BeanPostProcessors的前置处理。
 					bean = applyBeanPostProcessorsBeforeInstantiation(targetType, beanName);
+
+					// 如果bean实例在上述步骤中被创建，则还需要进行初始化后的BeanPostProcessors后置处理。
 					if (bean != null) {
+						// 当某个 BeanPostProcessor 返回 null 时,会中断后续处理器的执行,并使用上一个非 null 的结果
 						bean = applyBeanPostProcessorsAfterInitialization(bean, beanName);
 					}
 				}
@@ -1140,19 +1157,20 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	}
 
 	/**
-	 * Apply InstantiationAwareBeanPostProcessors to the specified bean definition
-	 * (by class and name), invoking their {@code postProcessBeforeInstantiation} methods.
-	 * <p>Any returned object will be used as the bean instead of actually instantiating
-	 * the target bean. A {@code null} return value from the post-processor will
-	 * result in the target bean being instantiated.
-	 * @param beanClass the class of the bean to be instantiated
-	 * @param beanName the name of the bean
-	 * @return the bean object to use instead of a default instance of the target bean, or {@code null}
+	 * 将 InstantiationAwareBeanPostProcessors 应用到指定的 bean定义
+	 *（按类和名称），调用它们的 {@code postProcessBeforeInstantiation} 方法。
+	 * <p>任何返回的对象都将用作 bean 而不是实际实例化
+	 * 目标bean。来自后处理器的 {@code null} 返回值将
+	 * 导致目标 bean 被实例化。
+	 * @param beanClass 要实例化的bean的类
+	 * @param beanName bean的名称
+	 * @return 要使用的 bean 对象，而不是目标 bean 的默认实例，或 {@code null}
 	 * @see InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation
 	 */
 	protected @Nullable Object applyBeanPostProcessorsBeforeInstantiation(Class<?> beanClass, String beanName) {
 		for (InstantiationAwareBeanPostProcessor bp : getBeanPostProcessorCache().instantiationAware) {
 			Object result = bp.postProcessBeforeInstantiation(beanClass, beanName);
+			// 提供一种短路机制,允许 BeanPostProcessor 完全接管 Bean 的实例化过程。 例如aop代理
 			if (result != null) {
 				return result;
 			}
@@ -1212,20 +1230,21 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 		}
 
-		// Candidate constructors for autowiring?
+		// 步骤1: 首先尝试从BeanPostProcessors确定构造函数，这主要是为了处理例如@Autowired注解的情况
 		Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
+		// 如果确定了构造函数或者bean定义中有相关的自动装配模式和构造函数参数，则使用自动装配构造函数创建bean实例
 		if (ctors != null || mbd.getResolvedAutowireMode() == AUTOWIRE_CONSTRUCTOR ||
 				mbd.hasConstructorArgumentValues() || !ObjectUtils.isEmpty(args)) {
 			return autowireConstructor(beanName, mbd, ctors, args);
 		}
 
-		// Preferred constructors for default construction?
+		// 步骤2: 如果BeanDefinition中存在首选构造函数，使用这些构造函数
 		ctors = mbd.getPreferredConstructors();
 		if (ctors != null) {
 			return autowireConstructor(beanName, mbd, ctors, null);
 		}
 
-		// No special handling: simply use no-arg constructor.
+		// 步骤3: 如果前面的步骤都没有返回bean实例，那么使用无参数构造函数实例化bean
 		return instantiateBean(beanName, mbd);
 	}
 

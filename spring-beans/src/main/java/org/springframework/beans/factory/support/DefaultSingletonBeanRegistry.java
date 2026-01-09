@@ -130,10 +130,10 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	/** Map between containing bean names: bean name to Set of bean names that the bean contains. */
 	private final Map<String, Set<String>> containedBeanMap = new ConcurrentHashMap<>(16);
 
-	/** Bean依赖关系映射：被依赖的Bean名称 -> 依赖它的Bean名称集合（depBeanName->beanName） */
+	/** 在依赖 bean 名称之间映射：beanName -> 依赖的 beanName 集。（beanName->depBeanName）*/
 	private final Map<String, Set<String>> dependentBeanMap = new ConcurrentHashMap<>(64);
 
-	/** 在依赖 bean 名称之间映射：beanName -> 依赖的 beanName 集。（beanName->depBeanName）*/
+	/** Bean依赖关系映射：被依赖的Bean名称 -> 依赖它的Bean名称集合（depBeanName->beanName） */
 	private final Map<String, Set<String>> dependenciesForBeanMap = new ConcurrentHashMap<>(64);
 
 
@@ -240,7 +240,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	}
 
 	/**
-	 * 返回在给定名称下注册的（原始）单例对象，如果尚未注册，则创建并注册一个新实例。
+	 * 返回对应beanName的单例对象，如果尚未注册，则创建并注册一个新实例。
 	 * @param beanName bean的名称
 	 * @param singletonFactory 用于延迟创建单例的ObjectFactory（如有必要）
 	 * @return 已注册的单例对象
@@ -577,6 +577,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * @see #isSingletonCurrentlyInCreation
 	 */
 	protected void beforeSingletonCreation(String beanName) {
+		// 检查beanName是否在排除列表中或已经在创建中的集合中。
+		// 如果bean不在排除列表中并且也不能添加到创建中的集合中，意味着bean已经在创建中。
 		if (!this.inCreationCheckExclusions.contains(beanName) && !this.singletonsCurrentlyInCreation.add(beanName)) {
 			throw new BeanCurrentlyInCreationException(beanName);
 		}
@@ -633,7 +635,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	/**
 	 * 为给定的 bean 注册一个依赖 bean，以便在给定 bean 被销毁之前先销毁依赖 bean。
 	 * @param beanName 给定 bean 的名称
-	 * @param dependentBeanName 依赖 bean 的名称
+	 * @param dependentBeanName 被依赖的bean的名称
 	 */
 	public void registerDependentBean(String beanName, String dependentBeanName) {
 		String canonicalName = canonicalName(beanName);

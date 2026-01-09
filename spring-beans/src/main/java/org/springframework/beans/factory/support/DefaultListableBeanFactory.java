@@ -190,7 +190,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	/** Map from dependency type to corresponding autowired value. */
 	private final Map<Class<?>, Object> resolvableDependencies = new ConcurrentHashMap<>(16);
 
-	/** Map of bean definition objects, keyed by bean name. */
+	/** beanName -> bd */
 	private final Map<String, BeanDefinition> beanDefinitionMap = new ConcurrentHashMap<>(256);
 
 	/** Map from bean name to merged BeanDefinitionHolder. */
@@ -962,13 +962,18 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 	@Override
 	public BeanDefinition getBeanDefinition(String beanName) throws NoSuchBeanDefinitionException {
+		// 1. 从beanDefinitionMap中获取bean的定义
 		BeanDefinition bd = this.beanDefinitionMap.get(beanName);
+
+		// 2. 如果没有找到BeanDefinition，进行日志跟踪并抛出异常
 		if (bd == null) {
 			if (logger.isTraceEnabled()) {
 				logger.trace("No bean named '" + beanName + "' found in " + this);
 			}
 			throw new NoSuchBeanDefinitionException(beanName);
 		}
+
+		// 3. 返回找到的BeanDefinition
 		return bd;
 	}
 
@@ -1092,17 +1097,18 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		return null;
 	}
 
+	// 容器启动阶段，预读并实例化所有非延迟加载（non-lazy-init）的单例 Bean
 	@Override
 	public void preInstantiateSingletons() throws BeansException {
 		if (logger.isTraceEnabled()) {
 			logger.trace("Pre-instantiating singletons in " + this);
 		}
 
-		// Iterate over a copy to allow for init methods which in turn register new bean definitions.
-		// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
+		// 锁定 Bean 名称列表,
+		// 某些 Bean 的初始化方法（如 init-method）可能会动态地注册新的 Bean 定义.会触发 ConcurrentModificationException
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
-		// Trigger initialization of all non-lazy singleton beans...
+		// 存储异步初始化bean的任务
 		List<CompletableFuture<?>> futures = new ArrayList<>();
 
 		this.preInstantiationThread.set(PreInstantiation.MAIN);
@@ -1110,6 +1116,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		try {
 			for (String beanName : beanNames) {
 				RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
+				// 条件：非抽象类、单例
 				if (!mbd.isAbstract() && mbd.isSingleton()) {
 					CompletableFuture<?> future = preInstantiateSingleton(beanName, mbd);
 					if (future != null) {
@@ -1123,6 +1130,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			this.preInstantiationThread.remove();
 		}
 
+		// 等待所有异步初始化的 Bean 完成
 		if (!futures.isEmpty()) {
 			try {
 				CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).join();
@@ -1132,7 +1140,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			}
 		}
 
-		// Trigger post-initialization callback for all applicable beans...
+		// 当所有非延迟加载的单例 Bean 都初始化完成后，
+		// 给特定的 SmartInitializingSingleton Bean 一个“最后通知”的机会
 		for (String beanName : beanNames) {
 			Object singletonInstance = getSingleton(beanName, false);
 			if (singletonInstance instanceof SmartInitializingSingleton smartSingleton) {
@@ -1144,6 +1153,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		}
 	}
 
+	// 同步或者异步初始化bean
 	private @Nullable CompletableFuture<?> preInstantiateSingleton(String beanName, RootBeanDefinition mbd) {
 		if (mbd.isBackgroundInit()) {
 			Executor executor = getBootstrapExecutor();
