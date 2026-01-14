@@ -22,6 +22,7 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
+ * Advisor链工厂的工厂接口。
  * Factory interface for advisor chains.
  *
  * @author Rod Johnson
@@ -30,13 +31,13 @@ import org.jspecify.annotations.Nullable;
 public interface AdvisorChainFactory {
 
 	/**
+	 * 根据给定的Advisor链配置，确定一组MethodInterceptor对象。
 	 * Determine a list of {@link org.aopalliance.intercept.MethodInterceptor} objects
 	 * for the given advisor chain configuration.
-	 * @param config the AOP configuration in the form of an Advised object
-	 * @param method the proxied method
-	 * @param targetClass the target class (may be {@code null} to indicate a proxy without
-	 * target object, in which case the method's declaring class is the next best option)
-	 * @return a List of MethodInterceptors (may also include InterceptorAndDynamicMethodMatchers)
+	 * @param config 表示AOP配置的Advised对象
+	 * @param method 被代理的方法
+	 * @param targetClass 目标类（可能为null，表示没有目标对象的代理，在这种情况下，方法的声明类是下一个最佳选择）
+	 * @return 一个MethodInterceptors的列表（也可能包括InterceptorAndDynamicMethodMatchers）
 	 */
 	List<Object> getInterceptorsAndDynamicInterceptionAdvice(Advised config, Method method, @Nullable Class<?> targetClass);
 

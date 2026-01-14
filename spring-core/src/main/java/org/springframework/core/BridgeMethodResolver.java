@@ -100,32 +100,62 @@ public final class BridgeMethodResolver {
 				(targetClass != null ? targetClass : specificMethod.getDeclaringClass()));
 	}
 
+	/**
+	 * 尝试解析原本的“桥接方法”对应的“实际方法”。
+	 * <p>
+	 * 如果传入的方法是一个编译器生成的 Bridge Method（通常参数被擦除为 Object），
+	 * 该方法会尝试找到该类中同名、参数匹配的原始泛型方法。
+	 *
+	 * @param bridgeMethod 传入的可能是一个桥接方法
+	 * @param targetClass 方法所在的声明类
+	 * @return 解析后的原始方法，如果解析失败或不需要解析，则返回原方法
+	 */
 	private static Method resolveBridgeMethod(Method bridgeMethod, Class<?> targetClass) {
+		// 1. 判断是否是“本地”方法（即：这个方法是不是就在 targetClass 这个类里声明的，而非父类继承）
 		boolean localBridge = (targetClass == bridgeMethod.getDeclaringClass());
 		Class<?> userClass = targetClass;
+
+		// 2. 【快速通道】如果它根本不是桥接方法，且是本地声明的，直接返回，别浪费时间查缓存和反射
 		if (!bridgeMethod.isBridge() && localBridge) {
+			// 获取原本的类（处理 CGLIB 代理类的情况，拿到被代理的目标类）
 			userClass = ClassUtils.getUserClass(targetClass);
+			// 如果不是代理类，直接返回原方法
 			if (userClass == targetClass) {
 				return bridgeMethod;
 			}
 		}
 
+		// 3. 【查缓存】为了性能，解析过的结果会存起来
+		// 如果是本地方法，key就是方法本身；如果是继承的或代理的，key包含类信息
 		Object cacheKey = (localBridge ? bridgeMethod : new MethodClassKey(bridgeMethod, targetClass));
 		Method bridgedMethod = cache.get(cacheKey);
+
+		// 4. 【核心逻辑】如果缓存没命中，开始干活
 		if (bridgedMethod == null) {
-			// Gather all methods with matching name and parameter size.
+			// 准备一个列表，用来存放候选的“真身”方法
 			List<Method> candidateMethods = new ArrayList<>();
+
+			// 定义过滤器：什么样的才算是“真身”？
+			// 逻辑通常是：名字相同、参数个数相同、不是桥接方法本身
 			MethodFilter filter = (candidateMethod -> isBridgedCandidateFor(candidateMethod, bridgeMethod));
+
+			// 5. 【搜寻】遍历 userClass 的所有方法，利用过滤器筛选
 			ReflectionUtils.doWithMethods(userClass, candidateMethods::add, filter);
+
 			if (!candidateMethods.isEmpty()) {
+				// 6. 【择优】
+				// 如果只找到一个候选者，那肯定就是它了
+				// 如果找到多个（极其罕见），调用 searchCandidates 进行更复杂的返回值/泛型匹配
 				bridgedMethod = (candidateMethods.size() == 1 ? candidateMethods.get(0) :
 						searchCandidates(candidateMethods, bridgeMethod));
 			}
+
+			// 7. 【兜底】如果找了一圈没找到（或者本来就没真身），那就还是用传入的这个方法
 			if (bridgedMethod == null) {
-				// A bridge method was passed in but we couldn't find the bridged method.
-				// Let's proceed with the passed-in method and hope for the best...
 				bridgedMethod = bridgeMethod;
 			}
+
+			// 8. 放入缓存，下次直接用
 			cache.put(cacheKey, bridgedMethod);
 		}
 		return bridgedMethod;
@@ -144,27 +174,47 @@ public final class BridgeMethodResolver {
 	}
 
 	/**
-	 * Searches for the bridged method in the given candidates.
-	 * @param candidateMethods the List of candidate Methods
-	 * @param bridgeMethod the bridge method
-	 * @return the bridged method, or {@code null} if none found
+	 * <b>在候选方法列表中搜寻真正的“被桥接方法”（真身）。</b>
+	 *
+	 * @param candidateMethods 候选方法列表（这些方法的名字和参数个数已经和 bridgeMethod 一样了）
+	 * @param bridgeMethod 编译器生成的那个桥接方法（通常参数是 Object）
+	 * @return 找到的真身方法，如果没找到或是无法确定，返回 null
 	 */
 	private static @Nullable Method searchCandidates(List<Method> candidateMethods, Method bridgeMethod) {
+		// 0. 防御性检查
 		if (candidateMethods.isEmpty()) {
 			return null;
 		}
+
 		Method previousMethod = null;
+		// 标记：是否所有候选者的泛型参数签名都完全一致？
 		boolean sameSig = true;
+
+		// 1. 遍历所有候选者，试图找到“真爱”
 		for (Method candidateMethod : candidateMethods) {
+
+			// 【核心判断】：利用泛型工具检查，candidateMethod 是否就是 bridgeMethod 的源头？
+			// 比如：检查 bridgeMethod 的签名是否兼容 candidateMethod 的泛型签名。
 			if (isBridgeMethodFor(bridgeMethod, candidateMethod, bridgeMethod.getDeclaringClass())) {
-				return candidateMethod;
+				return candidateMethod; // 找到了！直接返回，结束战斗。
 			}
+
+			// 如果不是“真爱”，我们顺便做个统计：
+			// 检查当前这个候选者，和上一个候选者，参数签名是不是一样的？
 			else if (previousMethod != null) {
+				// 只要有一个不一样，sameSig 就变成 false
 				sameSig = sameSig && Arrays.equals(
 						candidateMethod.getGenericParameterTypes(), previousMethod.getGenericParameterTypes());
 			}
 			previousMethod = candidateMethod;
 		}
+
+		// 2. 兜底逻辑
+		// 如果循环跑完了都没找到 isBridgeMethodFor 返回 true 的那个方法。
+		// 但是！如果所有候选者的参数签名其实都是一模一样的（sameSig == true），
+		// 那说明这几个候选者其实没本质区别（可能是父类子类重复定义的同签名方法），
+		// 这种情况下，返回第一个候选者通常是安全的。
+		// 否则，为了防止指鹿为马，返回 null。
 		return (sameSig ? candidateMethods.get(0) : null);
 	}
 

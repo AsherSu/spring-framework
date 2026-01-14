@@ -1151,8 +1151,8 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	}
 
 	/**
-	 * Return whether this bean definition is 'synthetic', that is,
-	 * not defined by the application itself.
+	 * true: Bean 不是由应用程序本身直接定义的,而是由 Spring 框架内部创建的基础设施 Bean
+	 * false: Bean 是通过应用程序的配置文件或注解直接定义的普通 Bean
 	 */
 	public boolean isSynthetic() {
 		return this.synthetic;

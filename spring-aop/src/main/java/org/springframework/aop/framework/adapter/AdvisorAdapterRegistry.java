@@ -58,10 +58,8 @@ public interface AdvisorAdapterRegistry {
 	MethodInterceptor[] getInterceptors(Advisor advisor) throws UnknownAdviceTypeException;
 
 	/**
-	 * Register the given {@link AdvisorAdapter}. Note that it is not necessary to register
-	 * adapters for an AOP Alliance Interceptors or Spring Advices: these must be
-	 * automatically recognized by an {@code AdvisorAdapterRegistry} implementation.
-	 * @param adapter an AdvisorAdapter that understands particular Advisor or Advice types
+	 * 注册一个Advisor适配器。
+	 * @param adapter 要注册的Advisor适配器
 	 */
 	void registerAdvisorAdapter(AdvisorAdapter adapter);
 

@@ -90,27 +90,30 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 
 
 	/**
-	 * Construct a new ReflectiveMethodInvocation with the given arguments.
-	 * @param proxy the proxy object that the invocation was made on
-	 * @param target the target object to invoke
-	 * @param method the method to invoke
-	 * @param arguments the arguments to invoke the method with
-	 * @param targetClass the target class, for MethodMatcher invocations
-	 * @param interceptorsAndDynamicMethodMatchers interceptors that should be applied,
-	 * along with any InterceptorAndDynamicMethodMatchers that need evaluation at runtime.
-	 * MethodMatchers included in this struct must already have been found to have matched
-	 * as far as was possibly statically. Passing an array might be about 10% faster,
-	 * but would complicate the code. And it would work only for static pointcuts.
+	 * 使用给定参数构造一个新的 ReflectiveMethodInvocation。
+	 * @param proxy 调用所在的代理对象。注入的对象
+	 * @param target 要调用的目标对象。包含业务逻辑的普通java对象
+	 * @param method 要调用的方法
+	 * @param arguments 调用方法时传入的参数
+	 * @param targetClass 目标类，用于方法匹配器的调用。普通java对象的类
+	 * @param interceptorsAndDynamicMethodMatchers 应该应用的拦截器，以及需要在运行时进行评估的任何 InterceptorAndDynamicMethodMatchers。
+	 * 此结构中包含的 MethodMatchers 必须已经被找到并匹配，尽可能地是静态的。传递一个数组可能会快约10%，但会使代码复杂化。并且它只能用于静态切入点。
 	 */
 	protected ReflectiveMethodInvocation(
 			Object proxy, @Nullable Object target, Method method, @Nullable Object[] arguments,
 			@Nullable Class<?> targetClass, List<Object> interceptorsAndDynamicMethodMatchers) {
 
+		// 代理对象
 		this.proxy = proxy;
+		// 目标对象
 		this.target = target;
+		// 目标类
 		this.targetClass = targetClass;
+		// 找到桥接方法
 		this.method = BridgeMethodResolver.findBridgedMethod(method);
+		// 调整参数
 		this.arguments = AopProxyUtils.adaptArgumentsIfNecessary(method, arguments);
+		// 拦截器和动态方法匹配器列表
 		this.interceptorsAndDynamicMethodMatchers = interceptorsAndDynamicMethodMatchers;
 	}
 
@@ -150,32 +153,35 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 		this.arguments = arguments;
 	}
 
-
+	/**
+	 * 执行拦截器链中的下一个拦截器或目标方法。
+	 * @return 方法调用结果
+	 * @throws Throwable 可能抛出的异常
+	 */
 	@Override
 	public @Nullable Object proceed() throws Throwable {
-		// We start with an index of -1 and increment early.
+		// 如果为-1 则 interceptorsAndDynamicMethodMatchers 为空
 		if (this.currentInterceptorIndex == this.interceptorsAndDynamicMethodMatchers.size() - 1) {
 			return invokeJoinpoint();
 		}
 
+		// 获取下一个拦截器或拦截器与动态方法匹配器对象
 		Object interceptorOrInterceptionAdvice =
 				this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
 		if (interceptorOrInterceptionAdvice instanceof InterceptorAndDynamicMethodMatcher dm) {
-			// Evaluate dynamic method matcher here: static part will already have
-			// been evaluated and found to match.
+			// 如果是拦截器与动态方法匹配器，则进行动态方法匹配
 			Class<?> targetClass = (this.targetClass != null ? this.targetClass : this.method.getDeclaringClass());
 			if (dm.matcher().matches(this.method, targetClass, this.arguments)) {
+				// 如果方法匹配成功，则调用拦截器的invoke方法
 				return dm.interceptor().invoke(this);
 			}
 			else {
-				// Dynamic matching failed.
-				// Skip this interceptor and invoke the next in the chain.
+				// 动态匹配失败，跳过当前拦截器并调用链中的下一个拦截器
 				return proceed();
 			}
 		}
 		else {
-			// It's an interceptor, so we just invoke it: The pointcut will have
-			// been evaluated statically before this object was constructed.
+			// 如果是拦截器，则直接调用拦截器的invoke方法
 			return ((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this);
 		}
 	}

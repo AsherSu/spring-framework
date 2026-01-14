@@ -340,18 +340,18 @@ public abstract class AopUtils {
 	}
 
 	/**
-	 * Invoke the given target via reflection, as part of an AOP method invocation.
-	 * @param target the target object
-	 * @param method the method to invoke
-	 * @param args the arguments for the method
-	 * @return the invocation result, if any
-	 * @throws Throwable if thrown by the target method
-	 * @throws org.springframework.aop.AopInvocationException in case of a reflection error
+	 * 使用反射调用给定的目标方法，作为AOP方法调用的一部分。
+	 * @param target 目标对象
+	 * @param method 要调用的方法
+	 * @param args 方法的参数
+	 * @return 调用结果，如果有的话
+	 * @throws Throwable 如果目标方法抛出异常
+	 * @throws org.springframework.aop.AopInvocationException 如果发生反射错误
 	 */
 	public static @Nullable Object invokeJoinpointUsingReflection(@Nullable Object target, Method method, @Nullable Object[] args)
 			throws Throwable {
 
-		// Use reflection to invoke the method.
+		// 使用反射调用方法
 		try {
 			Method originalMethod = BridgeMethodResolver.findBridgedMethod(method);
 			ReflectionUtils.makeAccessible(originalMethod);
@@ -359,15 +359,17 @@ public abstract class AopUtils {
 					KotlinDelegate.invokeSuspendingFunction(originalMethod, target, args) : originalMethod.invoke(target, args));
 		}
 		catch (InvocationTargetException ex) {
-			// Invoked method threw a checked exception.
-			// We must rethrow it. The client won't see the interceptor.
+			// 调用的方法抛出了已检查的异常。
+			// 我们必须重新抛出它。客户端不会看到拦截器。
 			throw ex.getTargetException();
 		}
 		catch (IllegalArgumentException ex) {
+			// 如果发生参数错误，则抛出AOP调用异常
 			throw new AopInvocationException("AOP configuration seems to be invalid: tried calling method [" +
 					method + "] on target [" + target + "]", ex);
 		}
 		catch (IllegalAccessException | InaccessibleObjectException ex) {
+			// 如果无法访问方法，则抛出AOP调用异常
 			throw new AopInvocationException("Could not access method [" + method + "]", ex);
 		}
 	}

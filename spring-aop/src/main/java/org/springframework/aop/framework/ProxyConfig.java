@@ -35,15 +35,19 @@ public class ProxyConfig implements Serializable {
 	/** use serialVersionUID from Spring 1.2 for interoperability. */
 	private static final long serialVersionUID = -8409359707199703185L;
 
-
+	// 是否强制用 CGLIB
 	private @Nullable Boolean proxyTargetClass;
 
+	// 是否激进优化
 	private @Nullable Boolean optimize;
 
+	// 是否禁止转为 Advised
 	private @Nullable Boolean opaque;
 
+	// 是否暴露到 ThreadLocal
 	private @Nullable Boolean exposeProxy;
 
+	// 是否禁止修改配置
 	private @Nullable Boolean frozen;
 
 

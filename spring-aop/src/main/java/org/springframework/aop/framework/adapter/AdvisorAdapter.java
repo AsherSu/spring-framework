@@ -22,41 +22,49 @@ import org.aopalliance.intercept.MethodInterceptor;
 import org.springframework.aop.Advisor;
 
 /**
- * Interface allowing extension to the Spring AOP framework to allow
- * handling of new Advisors and Advice types.
+ * <b>Spring AOP 的“通知适配器”接口。</b>
  *
- * <p>Implementing objects can create AOP Alliance Interceptors from
- * custom advice types, enabling these advice types to be used
- * in the Spring AOP framework, which uses interception under the covers.
+ * <p><b>大白话解释：</b><br>
+ * Spring AOP 的底层运行机制其实只认一种东西，那就是 {@link org.aopalliance.intercept.MethodInterceptor}（方法拦截器）。
+ * <br>
+ * 但是，Spring 为了方便大家开发，提供了很多特定类型的通知，比如“前置通知”（BeforeAdvice）、“异常通知”（ThrowsAdvice）等。
+ * 这些特定的通知类型，Spring 底层是不能直接调用的。
+ * <br>
+ * <b>这个接口的作用就是个“转换插头”：</b>它负责把那些 Spring 底层不直接支持的特殊 Advice（通知），
+ * 包装成一个标准的 MethodInterceptor（拦截器），这样 Spring 就可以统一处理它们了。
  *
- * <p>There is no need for most Spring users to implement this interface;
- * do so only if you need to introduce more Advisor or Advice types to Spring.
+ * <p><b>谁需要关注它：</b><br>
+ * 99% 的 Spring 使用者都不需要关心这个接口。只有当你想要扩展 Spring 框架，
+ * 发明一种全新的 Advice 类型（不仅仅是前置、后置那么简单）时，才需要实现这个接口来告诉 Spring 如何适配它。
  *
  * @author Rod Johnson
  */
 public interface AdvisorAdapter {
 
 	/**
-	 * Does this adapter understand this advice object? Is it valid to
-	 * invoke the {@code getInterceptors} method with an Advisor that
-	 * contains this advice as an argument?
-	 * @param advice an Advice such as a BeforeAdvice
-	 * @return whether this adapter understands the given advice object
-	 * @see #getInterceptor(org.springframework.aop.Advisor)
-	 * @see org.springframework.aop.BeforeAdvice
+	 * <b>资格审查：你能不能处理这种通知？</b>
+	 *
+	 * <p>询问当前的适配器，是否认识并支持处理传入的这个 {@code advice} 对象。
+	 * <br>比如：{@code MethodBeforeAdviceAdapter}（前置通知适配器）只会对
+	 * {@code MethodBeforeAdvice}（前置通知）返回 true，给它一个“异常通知”它就会返回 false。
+	 *
+	 * @param advice 需要被适配的通知对象（比如一个 BeforeAdvice）
+	 * @return 如果此适配器能把这个 advice 转换成拦截器，则返回 true；否则返回 false。
 	 */
 	boolean supportsAdvice(Advice advice);
 
 	/**
-	 * Return an AOP Alliance MethodInterceptor exposing the behavior of
-	 * the given advice to an interception-based AOP framework.
-	 * <p>Don't worry about any Pointcut contained in the Advisor;
-	 * the AOP framework will take care of checking the pointcut.
-	 * @param advisor the Advisor. The supportsAdvice() method must have
-	 * returned true on this object
-	 * @return an AOP Alliance interceptor for this Advisor. There's
-	 * no need to cache instances for efficiency, as the AOP framework
-	 * caches advice chains.
+	 * <b>执行转换：把 Advisor 里的通知变成拦截器。</b>
+	 *
+	 * <p>将传入的 {@code advisor}（里面包含了具体的 Advice）转换成一个符合 AOP Alliance 标准的
+	 * {@link org.aopalliance.intercept.MethodInterceptor}。
+	 *
+	 * <p><b>注意：</b><br>
+	 * 这个方法只负责把“通知逻辑”转换成“拦截逻辑”。至于这个通知应该在哪些方法上执行（即 Pointcut 切点逻辑），
+	 * 不归这里管，AOP 框架会在调用此前已经处理好了。
+	 *
+	 * @param advisor 包含具体 Advice 的切面对象。注意：调用此方法前，必须先通过 {@link #supportsAdvice} 检查通过。
+	 * @return 转换后的拦截器对象。Spring 框架拿到这个拦截器后，就会把它加入到方法调用的拦截链中去执行。
 	 */
 	MethodInterceptor getInterceptor(Advisor advisor);
 

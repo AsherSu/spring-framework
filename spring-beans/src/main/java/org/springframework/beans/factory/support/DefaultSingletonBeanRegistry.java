@@ -91,7 +91,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	/** Custom callbacks for singleton creation/registration. */
 	private final Map<String, Consumer<Object>> singletonCallbacks = new ConcurrentHashMap<>(16);
 
-	/** 早期单例对象的缓存：Bean 名称到 Bean 实例  二级缓存*/
+	/** 早期单例对象的缓存：Bean 名称到 早期Bean实例  二级缓存*/
 	private final Map<String, Object> earlySingletonObjects = new ConcurrentHashMap<>(16);
 
 	/** Set of registered singletons, containing the bean names in registration order. */
@@ -124,7 +124,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	/** Collection of suppressed Exceptions, available for associating related causes. */
 	private @Nullable Set<Exception> suppressedExceptions;
 
-	/** Disposable bean instances: bean name to disposable instance. */
+	/** 存储需要在容器关闭时执行销毁逻辑的 Bean 实例。BeanName -> DisposableBean 接口的 Bean 实例 */
 	private final Map<String, DisposableBean> disposableBeans = new LinkedHashMap<>();
 
 	/** Map between containing bean names: bean name to Set of bean names that the bean contains. */
@@ -591,7 +591,12 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * @see #isSingletonCurrentlyInCreation
 	 */
 	protected void afterSingletonCreation(String beanName) {
-		if (!this.inCreationCheckExclusions.contains(beanName) && !this.singletonsCurrentlyInCreation.remove(beanName)) {
+		// 检查给定的bean名称是否在排除列表中
+		if (!this.inCreationCheckExclusions.contains(beanName)
+				// 尝试从表示“当前正在创建的单例bean”集合中移除给定的bean名称
+				&& !this.singletonsCurrentlyInCreation.remove(beanName)) {
+			// 如果给定的bean名称无法从集合中移除，说明在此时该bean不应该在创建中。
+			// 这可能表示bean的创建有问题或被错误地标记为“当前正在创建”，因此抛出异常。
 			throw new IllegalStateException("Singleton '" + beanName + "' isn't currently in creation");
 		}
 	}

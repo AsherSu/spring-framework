@@ -58,22 +58,27 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 	public List<Object> getInterceptorsAndDynamicInterceptionAdvice(
 			Advised config, Method method, @Nullable Class<?> targetClass) {
 
-		// This is somewhat tricky... We have to process introductions first,
-		// but we need to preserve order in the ultimate list.
+		// 获取Advisor适配器注册表
 		AdvisorAdapterRegistry registry = GlobalAdvisorAdapterRegistry.getInstance();
+		// 获取AOP配置中的所有Advisor
 		Advisor[] advisors = config.getAdvisors();
+		// 创建一个拦截器列表
 		List<Object> interceptorList = new ArrayList<>(advisors.length);
+		// 获取实际类
 		Class<?> actualClass = (targetClass != null ? targetClass : method.getDeclaringClass());
 		Boolean hasIntroductions = null;
 
+		// 遍历所有Advisor
 		for (Advisor advisor : advisors) {
 			if (advisor instanceof PointcutAdvisor pointcutAdvisor) {
-				// Add it conditionally.
+				// 添加条件性地
 				if (config.isPreFiltered() || pointcutAdvisor.getPointcut().getClassFilter().matches(actualClass)) {
+					// 获取Advisor的Pointcut和MethodMatcher
 					MethodMatcher mm = pointcutAdvisor.getPointcut().getMethodMatcher();
 					boolean match;
 					if (mm instanceof IntroductionAwareMethodMatcher iamm) {
 						if (hasIntroductions == null) {
+							// 检查是否存在匹配的IntroductionAdvisor
 							hasIntroductions = hasMatchingIntroductions(advisors, actualClass);
 						}
 						match = iamm.matches(method, actualClass, hasIntroductions);

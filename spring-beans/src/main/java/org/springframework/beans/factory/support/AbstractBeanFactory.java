@@ -203,11 +203,6 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		this.parentBeanFactory = parentBeanFactory;
 	}
 
-
-	//---------------------------------------------------------------------
-	// Implementation of BeanFactory interface
-	//---------------------------------------------------------------------
-
 	@Override
 	public Object getBean(String name) throws BeansException {
 		// 调用doGetBean方法来真正的获取bean。
@@ -267,7 +262,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		// 步骤2: 尝试从缓存中检索单例bean
 		Object sharedInstance = getSingleton(beanName);
 
-		// 在单例缓存里已经有一个实例 同时 调用方没有提供额外的构造参数，则复用
+		// 在单例缓存中存在 同时 调用方没有提供额外的构造参数，则复用
 		if (sharedInstance != null && args == null) {
 			if (logger.isTraceEnabled()) {
 				if (isSingletonCurrentlyInCreation(beanName)) {
@@ -338,11 +333,11 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 									"Circular depends-on relationship between '" + beanName + "' and '" + dep + "'");
 						}
 						// 步骤7.2: 注册Bean与Bean之间的依赖关系
-						// 当前的Bean工厂中注册bean之间的依赖关系。这样，当获取或销毁bean时，Spring可以保持正确的顺序。
+						// 当前的Bean工厂中注册bean之间的依赖关系。这样，当获取或销毁bean时，Spring可以保持正确的顺序
 						registerDependentBean(dep, beanName);
 						try {
 							// 步骤7.3: 获取被依赖的Bean对象
-							// 确保每个被依赖的bean都已经被创建。这是通过直接调用getBean方法完成的，该方法负责初始化并返回指定的bean。
+							// 先创建被依赖的bean
 							getBean(dep);
 						}
 						catch (NoSuchBeanDefinitionException ex) {
@@ -383,6 +378,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					beanInstance = getObjectForBeanInstance(sharedInstance, requiredType, name, beanName, mbd);
 				}
 
+				// 原型
 				else if (mbd.isPrototype()) {
 					// It's a prototype -> create a new instance.
 					Object prototypeInstance = null;
@@ -396,6 +392,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					beanInstance = getObjectForBeanInstance(prototypeInstance, requiredType, name, beanName, mbd);
 				}
 
+				// 其他
 				else {
 					String scopeName = mbd.getScope();
 					if (!StringUtils.hasLength(scopeName)) {
@@ -436,6 +433,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			}
 		}
 
+		// 步骤9: 适配bean实例
 		return adaptBeanInstance(name, beanInstance, requiredType);
 	}
 
@@ -462,27 +460,17 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 */
 	@SuppressWarnings("unchecked")
 	<T> T adaptBeanInstance(String name, Object bean, @Nullable Class<?> requiredType) {
-		// 第一步：类型兼容性检查
-		// 如果没有指定所需类型，或者Bean实例已经是所需类型的实例，则直接返回
-		// isInstance()方法会检查继承关系和接口实现关系
+		// 检查所需的类型是否与实际bean实例的类型匹配
 		if (requiredType != null && !requiredType.isInstance(bean)) {
 			try {
-				// 第二步：尝试类型转换
-				// 使用Spring的类型转换系统尝试将Bean转换为所需类型
-				// TypeConverter支持多种转换方式：
-				// - 基本类型转换（如String到Integer）
-				// - 集合类型转换（如List到Set）
-				// - 自定义PropertyEditor转换
-				// - ConversionService转换
+				// 如果不匹配，尝试转换bean实例为所需的类型
 				Object convertedBean = getTypeConverter().convertIfNecessary(bean, requiredType);
 
-				// 第三步：转换结果验证
-				// 如果转换器返回null，说明无法进行转换
+				// 如果转换后的bean为null，抛出异常
 				if (convertedBean == null) {
 					throw new BeanNotOfRequiredTypeException(name, requiredType, bean.getClass());
 				}
 
-				// 转换成功，返回转换后的对象
 				return (T) convertedBean;
 			}
 			catch (TypeMismatchException ex) {
@@ -494,8 +482,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			}
 		}
 
-		// Bean已经是所需类型，或者没有指定所需类型，直接返回原始Bean
-		// 这里的强制类型转换是安全的，因为上面的检查已经确保了类型兼容性
+		// 如果bean实例的类型与所需的类型匹配，直接返回bean实例性
 		return (T) bean;
 	}
 
@@ -1972,7 +1959,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			synchronized (this.mergedBeanDefinitions) {
 				if (!isBeanEligibleForMetadataCaching(beanName)) {
 					// 让 bean 定义在我们实际创建 bean 时重新合并，
-					// 以防其元数据在此期间发生了更改。
+					// 以防其元数据初始化前（早期扫描、postProcessing）发生了更改。
 					clearMergedBeanDefinition(beanName);
 				}
 				this.alreadyCreated.add(beanName);

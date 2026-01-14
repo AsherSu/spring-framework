@@ -353,12 +353,7 @@ public class MutablePropertyValues implements PropertyValues, Serializable {
 		this.converted = true;
 	}
 
-	/**
-	 * 是否由最开始读取的 String值 转换为最终使用的类型。
-	 *
-	 * 返回此持有者是否仅包含已转换的值（{@code true}），
-	 * 或者值是否仍需要转换（{@code false}）。
-	 */
+	// 检查是否已经转换过
 	public boolean isConverted() {
 		return this.converted;
 	}
