@@ -1,4 +1,4 @@
-package org.springframework.spring_reading;
+package org.springframework.spring_reading.Bean;
 
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
@@ -6,7 +6,7 @@ import org.springframework.spring_reading.My.MyController;
 import org.springframework.spring_reading.My.MyRepository;
 import org.springframework.spring_reading.My.MyService;
 
-// 扫描bean
+// 扫描路径上符合条件的类（通常是带有 @Component 及其衍生注解的类），并将其注册为 BeanDefinition
 
 // ClassPathBeanDefinitionScanner 类，用于在类路径上 扫描指定包及其子包中 的类，识别符合条件的类，
 // 并将其注册为 Spring Bean 的定义。从而实现组件扫描和自动装配，使我们能够方便地管理和配置应用程序

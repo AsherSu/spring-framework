@@ -1,0 +1,17 @@
+package org.springframework.spring_reading.Bean.Provider;
+
+import jakarta.inject.Provider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+
+@Controller
+public class MyController {
+
+	@Autowired
+	private Provider<MyService> myServiceProvider;
+
+	public void showService(){
+		System.out.println("myServiceProvider1 = " + myServiceProvider.get());
+		System.out.println("myServiceProvider2 = " + myServiceProvider.get());
+	}
+}

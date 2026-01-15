@@ -1,4 +1,4 @@
-package org.springframework.spring_reading.InstantiationAwareBeanPostProcessor;
+package org.springframework.spring_reading.Bean.InstantiationAwareBeanPostProcessor;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

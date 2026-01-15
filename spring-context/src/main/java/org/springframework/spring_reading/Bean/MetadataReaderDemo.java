@@ -1,4 +1,4 @@
-package org.springframework.spring_reading;
+package org.springframework.spring_reading.Bean;
 
 import org.springframework.core.type.ClassMetadata;
 import org.springframework.core.type.MethodMetadata;

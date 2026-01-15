@@ -1,4 +1,4 @@
-package org.springframework.spring_reading.InstantiationAwareBeanPostProcessor;
+package org.springframework.spring_reading.Bean.InstantiationAwareBeanPostProcessor;
 
 public interface MyDataBase {
 	String getUsername();

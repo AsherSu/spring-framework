@@ -441,10 +441,14 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 					logger.trace("Scanning " + resource);
 				}
 				try {
+					// 使用 ASM 技术直接读取字节码元数据，而不加载类
+					// metadataReader 这是一个轻量级的读取器。它能告诉你这个类有哪些注解、是否是抽象类、父类是谁，但不需要将类加载到 JVM 中。
 					MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
+					// 过滤器匹配
 					if (isCandidateComponent(metadataReader)) {
 						ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
 						sbd.setSource(resource);
+						// 类定义有效性检查
 						if (isCandidateComponent(sbd)) {
 							if (debugEnabled) {
 								logger.debug("Identified candidate component class: " + resource);

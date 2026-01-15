@@ -1,4 +1,4 @@
-package org.springframework.spring_reading;
+package org.springframework.spring_reading.Bean;
 
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.spring_reading.My.MyConfiguration;

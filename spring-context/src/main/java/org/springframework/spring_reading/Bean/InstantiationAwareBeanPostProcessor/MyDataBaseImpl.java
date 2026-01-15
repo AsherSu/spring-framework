@@ -1,4 +1,4 @@
-package org.springframework.spring_reading.InstantiationAwareBeanPostProcessor;
+package org.springframework.spring_reading.Bean.InstantiationAwareBeanPostProcessor;
 
 import org.springframework.beans.factory.annotation.Value;
 

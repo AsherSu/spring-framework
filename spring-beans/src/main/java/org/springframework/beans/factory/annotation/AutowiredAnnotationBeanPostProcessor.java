@@ -489,18 +489,22 @@ public class AutowiredAnnotationBeanPostProcessor implements SmartInstantiationA
 
 	@Override
 	public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) {
-		// 收集所有需要注入的字段和方法信息
+		// 获取与bean名称和类相关的InjectionMetadata。
+		// 这包括该bean需要进行注入的所有字段和方法。
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, bean.getClass(), pvs);
 		try {
-			// 依赖注入
+			// 使用获取到的InjectionMetadata，实际进行属性的注入。
 			metadata.inject(bean, beanName, pvs);
 		}
+		// 如果在注入过程中出现BeanCreationException，直接抛出。
 		catch (BeanCreationException ex) {
 			throw ex;
 		}
+		// 捕获其他异常，并以BeanCreationException的形式抛出，提供详细的错误信息。
 		catch (Throwable ex) {
 			throw new BeanCreationException(beanName, "Injection of autowired dependencies failed", ex);
 		}
+		// 返回原始的PropertyValues，因为这个方法主要关注依赖注入而不是修改属性。
 		return pvs;
 	}
 

@@ -1,4 +1,4 @@
-package org.springframework.spring_reading;
+package org.springframework.spring_reading.Bean;
 
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.annotation.AnnotatedBeanDefinitionReader;

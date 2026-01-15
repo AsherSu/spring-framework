@@ -292,12 +292,12 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 				// 步骤3: 生成 Bean 的名称
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
 
-				// 步骤4: 设置一些通用的注解和
+				// 步骤4: 设置 扫描器上的公共配置 应用到 具体的bean 上
 				if (candidate instanceof AbstractBeanDefinition abstractBeanDefinition) {
 					postProcessBeanDefinition(abstractBeanDefinition, beanName);
 				}
 
-				// 步骤5: 将通用的注解设置到bd
+				// 步骤5: 将 类上的特定注解 填充到 BeanDefinition 中
 				if (candidate instanceof AnnotatedBeanDefinition annotatedBeanDefinition) {
 					AnnotationConfigUtils.processCommonDefinitionAnnotations(annotatedBeanDefinition);
 				}
@@ -353,28 +353,32 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 * has been found for the specified name
 	 */
 	protected boolean checkCandidate(String beanName, BeanDefinition beanDefinition) throws IllegalStateException {
+		// 全新注册
 		if (!this.registry.containsBeanDefinition(beanName)) {
 			return true;
 		}
 
+		// 获取已存在相同名称的 BeanDefinition
 		BeanDefinition existingDef = this.registry.getBeanDefinition(beanName);
 		BeanDefinition originatingDef = existingDef.getOriginatingBeanDefinition();
 		if (originatingDef != null) {
 			existingDef = originatingDef;
 		}
 
-		// Explicitly registered overriding bean?
+		//手动定义 且 可覆盖 因为手动bean可覆盖，所以不覆盖
+		//手动定义 且 类名相同
 		if (!(existingDef instanceof ScannedGenericBeanDefinition) &&
 				(this.registry.isBeanDefinitionOverridable(beanName) || ObjectUtils.nullSafeEquals(
 						beanDefinition.getBeanClassName(), existingDef.getBeanClassName()))) {
 			return false;
 		}
 
-		// Scanned same file or equivalent class twice?
+		// 是否重复扫描
 		if (isCompatible(beanDefinition, existingDef)) {
 			return false;
 		}
 
+		// 命名冲突
 		throw new ConflictingBeanDefinitionException("Annotation-specified bean name '" + beanName +
 				"' for bean class [" + beanDefinition.getBeanClassName() + "] conflicts with existing, " +
 				"non-compatible bean definition of same name and class [" + existingDef.getBeanClassName() + "]");
