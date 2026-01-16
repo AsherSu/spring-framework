@@ -1631,54 +1631,52 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	public @Nullable Object resolveDependency(DependencyDescriptor descriptor, @Nullable String requestingBeanName,
 											  @Nullable Set<String> autowiredBeanNames, @Nullable TypeConverter typeConverter) throws BeansException {
 
-		// 初始化descriptor，用于在后续依赖解析过程中获取方法/构造函数的参数名
+		// 1. 【参数名发现】初始化参数名发现器 (利用 ASM 读取字节码中的 LocalVariableTable)
+		// 作用：为了后续能通过"参数名"来匹配 Bean (fallback 策略)，这里必须先解析出参数名。
 		descriptor.initParameterNameDiscovery(getParameterNameDiscoverer());
 
-		// 当注入点的类型是 Optional 时，会将实际的依赖包装在 Optional 中
+		// 2. 【Optional 支持】处理 Java 8 Optional 类型
+		// 作用：如果依赖不存在，不抛异常，而是返回 Optional.empty()。
+		// 原理：内部调用 doResolveDependency，如果捕获异常或返回 null，则包装为空 Optional。
 		if (Optional.class == descriptor.getDependencyType()) {
 			return createOptionalDependency(descriptor, requestingBeanName);
 		}
-		// 这些类型用于延迟获取 Bean 实例，避免循环依赖或提供更灵活的 Bean 获取方式
+
+		// 3. 【ObjectProvider/ObjectFactory 支持】处理 Spring 自身的延迟/多例句柄
+		// 作用：注入一个"工厂"而非 Bean 本身。
+		// 场景：解决循环依赖、获取 Prototype Bean 的多个实例、延迟获取。
 		else if (ObjectFactory.class == descriptor.getDependencyType() ||
 				ObjectProvider.class == descriptor.getDependencyType()) {
 			return new DependencyObjectProvider(descriptor, requestingBeanName);
 		}
-		// Provider 是 Java 依赖注入标准（javax.inject）中定义的延迟获取接口
+
+		// 4. 【JSR-330 Provider 支持】处理 Java 标准依赖注入接口 (javax.inject.Provider)
+		// 作用：同 ObjectProvider，为了兼容标准 Java 规范。
 		else if (jakartaInjectProviderClass == descriptor.getDependencyType()) {
 			return new Jsr330Factory().createDependencyProvider(descriptor, requestingBeanName);
 		}
-		// 当依赖上标注了 @Lazy 注解时，Spring 会创建一个代理对象来延迟实际的 Bean 创建
+
+		// 5. 【@Lazy 代理支持】处理带有 @Lazy 注解的注入点
+		// 作用：注入一个 CGLIB/JDK 代理对象。
+		// 原理：调用 AutowireCandidateResolver (我们在上一个问题中解析过) 生成代理。
 		else if (descriptor.supportsLazyResolution()) {
-			// 尝试从自动装配候选解析器中获取延迟解析的代理对象
 			Object result = getAutowireCandidateResolver().getLazyResolutionProxyIfNecessary(
 					descriptor, requestingBeanName);
 			if (result != null) {
-				return result; // 返回延迟解析代理，实际的 Bean 创建会延迟到首次使用时
+				return result;
 			}
 		}
 
-		// 这是最常见的情况，直接解析并注入具体的 Bean 实例
+		// 6. 【核心路径】上述特殊情况都不是，说明需要注入真正的 Bean 实例
+		// 进入我们在上一个问题中详细解析的 "漏斗型" 查找逻辑。
 		return doResolveDependency(descriptor, requestingBeanName, autowiredBeanNames, typeConverter);
 	}
 
-	//这个方法的参数含义和作用如下：
-	//DependencyDescriptor descriptor
-	//含义：依赖描述符，包含了需要注入的依赖的详细信息
-	//作用：提供依赖的类型、注解信息、是否必需、字段/参数名等元数据，用于确定要注入什么类型的Bean
-	//@Nullable String beanName
-	//含义：请求依赖注入的Bean名称
-	//作用：标识是哪个Bean正在请求这个依赖，用于循环依赖检测、日志记录和异常信息
-	//@Nullable Set<String> autowiredBeanNames
-	//含义：存储所有被自动装配的Bean名称的集合
-	//作用：收集依赖解析过程中涉及的所有Bean名称，用于依赖关系追踪和管理
-	//@Nullable TypeConverter typeConverter
-	//含义：类型转换器
-	//作用：当找到的Bean类型与期望的注入类型不完全匹配时，用于进行类型转换
 	@SuppressWarnings("NullAway") // Dataflow analysis limitation
 	public @Nullable Object doResolveDependency(DependencyDescriptor descriptor, @Nullable String beanName,
 			@Nullable Set<String> autowiredBeanNames, @Nullable TypeConverter typeConverter) throws BeansException {
 
-		// 设置当前线程的注入点，用于在解析过程中获取当前正在处理的注入点信息
+		// 0. 记录当前注入点（用于嵌套解析时获取上下文）
 		InjectionPoint previousInjectionPoint = ConstructorResolver.setCurrentInjectionPoint(descriptor);
 		try {
 			// 步骤1: 对于已经解析过的单例Bean或配置值，直接从缓存返回，避免重复的类型匹配和候选筛选
@@ -1716,7 +1714,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				}
 			}
 
-			// 步骤3: 处理通过声明的依赖名称或限定符建议的名称匹配目标 Bean 名称的情况
+			// 步骤3: 开发者使用了 @Qualifier("myService") 明确指定了 Bean 名称。或者在 XML 配置中使用了 autowire="byName"。
 			if (descriptor.usesStandardBeanLookup()) {
 				// 获取依赖的名称
 				String dependencyName = descriptor.getDependencyName();
@@ -1743,15 +1741,19 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				}
 			}
 
-			// 步骤4a: 处理多个 Bean 作为流、数组、标准集合或普通 Map 的情况
+			// 步骤4a: 多bean注入，注入点是 数组、集合 或 Map 类型
 			Object multipleBeans = resolveMultipleBeans(descriptor, beanName, autowiredBeanNames, typeConverter);
 			if (multipleBeans != null) {
 				return multipleBeans;
 			}
-			// 步骤4b: 处理直接匹配的 Bean，可能包括 Collection 或 Map 类型的 Bean
+
+			// 步骤4b: 按类型注入
 			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, type, descriptor);
+
+			//海选结果为空
+			//如果 @Autowired(required = true)（默认），则抛异常。
+			//如果 @Autowired(required = false)，则返回 null。
 			if (matchingBeans.isEmpty()) {
-				// 步骤4c (回退): 处理自定义的 Collection 或 Map 声明，用于收集多个 Bean
 				multipleBeans = resolveMultipleBeansFallback(descriptor, beanName, autowiredBeanNames, typeConverter);
 				if (multipleBeans != null) {
 					return multipleBeans;
@@ -1766,9 +1768,9 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			String autowiredBeanName;
 			Object instanceCandidate;
 
-			// 步骤5: 确定唯一的候选 Bean
+			// 步骤5: 唯一性决策
+			// 如果有多个匹配的 Bean，则确定最优的候选 Bean
 			if (matchingBeans.size() > 1) {
-				// 如果有多个匹配的 Bean，则确定最优的候选 Bean
 				autowiredBeanName = determineAutowireCandidate(matchingBeans, descriptor);
 				if (autowiredBeanName == null) {
 					// 如果是必需的注入点或不是数组、集合或 Map 类型，则抛出非唯一匹配的异常
@@ -1783,8 +1785,9 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				// 获取确定的候选 Bean 实例
 				instanceCandidate = matchingBeans.get(autowiredBeanName);
 			}
+
+			// 如果只有一个匹配的 Bean，则直接使用它
 			else {
-				// 如果只有一个匹配的 Bean，则直接使用它
 				Map.Entry<String, Object> entry = matchingBeans.entrySet().iterator().next();
 				autowiredBeanName = entry.getKey();
 				instanceCandidate = entry.getValue();

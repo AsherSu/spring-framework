@@ -1,4 +1,4 @@
-package org.springframework.spring_reading.AopProxyFactory;
+package org.springframework.spring_reading.aop.AopProxyFactory;
 
 import org.springframework.aop.framework.AdvisedSupport;
 import org.springframework.aop.framework.AopProxyFactory;
