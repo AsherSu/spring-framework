@@ -65,6 +65,8 @@ import org.springframework.util.ObjectUtils;
  * @author Sam Brannen
  * @see org.springframework.aop.framework.AopProxy
  */
+
+// 指定 targetSource对象的interfaces 设置 由advisorChainFactory解析advisors出来的MethodInterceptor链条
 public class AdvisedSupport extends ProxyConfig implements Advised {
 
 	/** use serialVersionUID from Spring 2.0 for interoperability. */
@@ -72,57 +74,88 @@ public class AdvisedSupport extends ProxyConfig implements Advised {
 
 
 	/**
-	 * Canonical TargetSource when there's no target, and behavior is
-	 * supplied by the advisors.
+	 * [空目标源常量]
+	 * 当一个代理对象不需要“目标对象”（Target），纯粹只为了执行拦截器逻辑时（比如只做鉴权或日志，没有具体业务类），
+	 * 就会使用这个静态的“空对象”来占位。
 	 */
 	public static final TargetSource EMPTY_TARGET_SOURCE = EmptyTargetSource.INSTANCE;
 
 
-	/** Package-protected to allow direct access for efficiency. */
+	/**
+	 * [核心字段：目标源]
+	 * 默认初始化为 EMPTY_TARGET_SOURCE。
+	 * 这是代理对象背后的“供应商”。正如我们之前讨论的，它负责获取真正的业务对象（Target）。
+	 * 修饰符是 package-protected，允许同包下的代理创建器直接访问以提高效率。
+	 */
 	@SuppressWarnings("serial")
 	TargetSource targetSource = EMPTY_TARGET_SOURCE;
 
-	/** Whether the Advisors are already filtered for the specific target class. */
+	/**
+	 * [性能优化标记]
+	 * 如果为 true，表示当前的 Advisors（拦截器列表）已经针对具体的目标类过滤过了。
+	 * 作用：在生成代理时，不需要再重复检查“这个拦截器是否匹配这个类”，直接用就行，提升创建速度。
+	 */
 	private boolean preFiltered = false;
 
-	/** The AdvisorChainFactory to use. */
+	/**
+	 * [核心组件：链工厂]
+	 * 负责把配置好的 Advisors（切面）转换成针对具体方法的 MethodInterceptor 链（拦截器链）。
+	 * 当你调用代理方法时，就是它计算出该执行哪些通知（Advice）。
+	 * 默认使用 DefaultAdvisorChainFactory。
+	 */
 	@SuppressWarnings("serial")
 	private AdvisorChainFactory advisorChainFactory = DefaultAdvisorChainFactory.INSTANCE;
 
 	/**
-	 * Interfaces to be implemented by the proxy. Held in List to keep the order
-	 * of registration, to create JDK proxy with specified order of interfaces.
+	 * [代理接口列表]
+	 * 决定了生成的代理对象要实现哪些接口（比如 UserService, ApplicationListener）。
+	 * * 重点：使用 List 而不是 Set，是为了保持顺序。
+	 * * 因为在 JDK 动态代理中，接口的声明顺序有时会影响方法调用的分发逻辑。
 	 */
 	@SuppressWarnings("serial")
 	private List<Class<?>> interfaces = new ArrayList<>();
 
 	/**
-	 * List of Advisors. If an Advice is added, it will be wrapped
-	 * in an Advisor before being added to this List.
+	 * [核心字段：通知/切面列表]
+	 * 这里存放了所有的增强逻辑（Advice）。
+	 * * 注意：即使你添加的是一个简单的 Interceptor，Spring 也会把它包装成一个 Advisor 对象存进去。
+	 * * 这是一个有序列表，顺序决定了拦截器的执行先后（比如先开启事务，再记录日志）。
 	 */
 	@SuppressWarnings("serial")
 	private List<Advisor> advisors = new ArrayList<>();
 
 	/**
-	 * List of minimal {@link AdvisorKeyEntry} instances,
-	 * to be assigned to the {@link #advisors} field on reduction.
-	 * @since 6.0.10
-	 * @see #reduceToAdvisorKey
+	 * [内部优化：Advisor 键] (Since 6.0.10)
+	 * 这是一个为了序列化和内存优化设计的字段。
+	 * 在某些复杂的代理场景下（如 Native Image 或序列化），为了避免持有过重的 Advisor 对象，
+	 * 可能会将其缩减为 Key 的形式存储。默认情况下它指向上面的 advisors 列表。
 	 */
 	@SuppressWarnings("serial")
 	private List<Advisor> advisorKey = this.advisors;
 
-	/** Cache with Method as key and advisor chain List as value. */
+	/**
+	 * [核心缓存：方法级拦截器链缓存]
+	 * * Key: MethodCacheKey (包含方法对象 Method)
+	 * * Value: List<Object> (该方法对应的拦截器链)
+	 *
+	 * 作用：这是 Spring AOP 运行时性能的关键！
+	 * 当第一次调用 `userProxy.save()` 时，Spring 会计算该方法需要经过哪些拦截器，计算结果会存入这个 Map。
+	 * 下次再调用 `save()`，直接从 Map 取链条，不再重新计算。
+	 * (transient 表示不参与序列化)
+	 */
 	private transient @Nullable Map<MethodCacheKey, List<Object>> methodCache;
 
-	/** Cache with shared interceptors which are not method-specific. */
+	/**
+	 * [缓存：共享拦截器]
+	 * 针对那些“对所有方法都生效”的通用拦截器（比如 Head/Tail 拦截器），单独缓存一份，避免重复查找。
+	 */
 	private transient volatile @Nullable List<Object> cachedInterceptors;
 
 	/**
-	 * Optional field for {@link AopProxy} implementations to store metadata in.
-	 * Used by {@link JdkDynamicAopProxy}.
-	 * @since 6.1.3
-	 * @see JdkDynamicAopProxy#JdkDynamicAopProxy(AdvisedSupport)
+	 * [JDK 代理专用缓存] (Since 6.1.3)
+	 * * 这是一个非常新的优化字段。
+	 * * 专门给 JdkDynamicAopProxy 用来存储一些底层的元数据（比如方法的索引、分发逻辑的预计算结果）。
+	 * * 目的：进一步压榨 JDK 动态代理的反射调用性能。
 	 */
 	transient volatile @Nullable Object proxyMetadataCache;
 

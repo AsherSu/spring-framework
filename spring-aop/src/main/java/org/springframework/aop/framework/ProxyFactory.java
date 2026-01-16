@@ -23,28 +23,30 @@ import org.springframework.aop.TargetSource;
 import org.springframework.util.ClassUtils;
 
 /**
- * Factory for AOP proxies for programmatic use, rather than via declarative
- * setup in a bean factory. This class provides a simple way of obtaining
- * and configuring AOP proxy instances in custom user code.
+ * [通俗定义]：这是一个“代理工厂”。
+ * 它的作用是：让你在代码里手动通过 new 的方式创建一个 AOP 代理对象，
+ * 而不是非得依靠 Spring 容器的 XML 配置或注解（@Transactional 等）。
  *
- * @author Rod Johnson
- * @author Juergen Hoeller
- * @author Rob Harrop
- * @since 14.03.2003
+ * 它是 Spring AOP 对外暴露的最常用的“制造机”。
+ * * 继承关系：它继承了 ProxyCreatorSupport，这意味着它天生就拥有管理“拦截器链”、“TargetSource”的能力。
  */
 @SuppressWarnings("serial")
 public class ProxyFactory extends ProxyCreatorSupport {
 
 	/**
-	 * Create a new ProxyFactory.
+	 * [构造器 1]：空构造器。
+	 * 你买了个空锅。接下来你需要手动调用 setTarget() 和 addAdvice() 来配置它。
 	 */
 	public ProxyFactory() {
 	}
 
 	/**
-	 * Create a new ProxyFactory.
-	 * <p>Will proxy all interfaces that the given target implements.
-	 * @param target the target object to be proxied
+	 * [构造器 2 - 最常用]：傻瓜式构造器。
+	 * 你给它一个普通对象（Target），它会自动做两件事：
+	 * 1. 把它包装成一个 SingletonTargetSource（单例源）。
+	 * 2. 自动扫描这个对象实现了哪些接口，并把这些接口全部添加到代理配置中。
+	 * * 结果：生成的代理会尽可能是 JDK 动态代理（因为有接口）。
+	 * @param target 被代理的原始对象
 	 */
 	public ProxyFactory(Object target) {
 		setTarget(target);
@@ -52,21 +54,16 @@ public class ProxyFactory extends ProxyCreatorSupport {
 	}
 
 	/**
-	 * Create a new ProxyFactory.
-	 * <p>No target, only interfaces. Must add interceptors.
-	 * @param proxyInterfaces the interfaces that the proxy should implement
+	 * [构造器 3]：没有目标对象，只有接口。
+	 * 这种通常用于“纯拦截”场景（比如 Mock 框架，或者类似 Retrofit 那种只有接口没有实现的场景）。
 	 */
 	public ProxyFactory(Class<?>... proxyInterfaces) {
 		setInterfaces(proxyInterfaces);
 	}
 
 	/**
-	 * Create a new ProxyFactory for the given interface and interceptor.
-	 * <p>Convenience method for creating a proxy for a single interceptor,
-	 * assuming that the interceptor handles all calls itself rather than
-	 * delegating to a target, like in the case of remoting proxies.
-	 * @param proxyInterface the interface that the proxy should implement
-	 * @param interceptor the interceptor that the proxy should invoke
+	 * [构造器 4]：针对特定接口和拦截器的快捷方式。
+	 * 适用于：你只想拦截某个接口的方法，而且逻辑都在拦截器里，不需要后面有个真实对象干活。
 	 */
 	public ProxyFactory(Class<?> proxyInterface, Interceptor interceptor) {
 		addInterface(proxyInterface);
@@ -74,10 +71,8 @@ public class ProxyFactory extends ProxyCreatorSupport {
 	}
 
 	/**
-	 * Create a ProxyFactory for the specified {@code TargetSource},
-	 * making the proxy implement the specified interface.
-	 * @param proxyInterface the interface that the proxy should implement
-	 * @param targetSource the TargetSource that the proxy should invoke
+	 * [构造器 5 - 高级]：自定义 TargetSource。
+	 * 如果你想用对象池、热替换等高级功能，就传 TargetSource 进去，而不是传 Object。
 	 */
 	public ProxyFactory(Class<?> proxyInterface, TargetSource targetSource) {
 		addInterface(proxyInterface);
@@ -86,25 +81,21 @@ public class ProxyFactory extends ProxyCreatorSupport {
 
 
 	/**
-	 * Create a new proxy according to the settings in this factory.
-	 * <p>Can be called repeatedly. Effect will vary if we've added
-	 * or removed interfaces. Can add and remove interceptors.
-	 * <p>Uses a default class loader: Usually, the thread context class loader
-	 * (if necessary for proxy creation).
-	 * @return the proxy object
+	 * [核心方法]：开工制造！
+	 * * 它的内部逻辑是：
+	 * 1. createAopProxy()：判断是用 JDK 动态代理还是 CGLIB。
+	 * - 如果有接口且没强制用 CGLIB -> JDK
+	 * - 如果没接口或强制用 CGLIB -> CGLIB
+	 * 2. getProxy()：利用选定的技术生成字节码或对象。
+	 * * @return 最终的代理对象（Proxy）
 	 */
 	public Object getProxy() {
 		return createAopProxy().getProxy();
 	}
 
 	/**
-	 * Create a new proxy according to the settings in this factory.
-	 * <p>Can be called repeatedly. Effect will vary if we've added
-	 * or removed interfaces. Can add and remove interceptors.
-	 * <p>Uses the given class loader (if necessary for proxy creation).
-	 * @param classLoader the class loader to create the proxy with
-	 * (or {@code null} for the low-level proxy facility's default)
-	 * @return the proxy object
+	 * [核心方法]：指定类加载器的制造。
+	 * 有时候在复杂的 Web 容器或模块化环境（OSGi）里，你需要指定 ClassLoader 才能正确生成类。
 	 */
 	public Object getProxy(@Nullable ClassLoader classLoader) {
 		return createAopProxy().getProxy(classLoader);
@@ -151,10 +142,8 @@ public class ProxyFactory extends ProxyCreatorSupport {
 	}
 
 	/**
-	 * Create a proxy for the specified {@code TargetSource} that extends
-	 * the target class of the {@code TargetSource}.
-	 * @param targetSource the TargetSource that the proxy should invoke
-	 * @return the proxy object
+	 * [静态工具方法]：强行对类进行代理（CGLIB）。
+	 * 哪怕你有接口，这个方法也会通过 setProxyTargetClass(true) 强迫使用 CGLIB 继承方式生成代理。
 	 */
 	public static Object getProxy(TargetSource targetSource) {
 		if (targetSource.getTargetClass() == null) {

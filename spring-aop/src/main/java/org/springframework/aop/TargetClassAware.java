@@ -19,11 +19,15 @@ package org.springframework.aop;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Minimal interface for exposing the target class behind a proxy.
+ * [通俗定义]：这是一个“身份透视”接口。
+ * 它的存在只有一个目的：让外界能透过厚厚的代理（Proxy）外壳，看到里面包裹的真实业务类（Target Class）是谁。
  *
- * <p>Implemented by AOP proxy objects and proxy factories
- * (via {@link org.springframework.aop.framework.Advised})
- * as well as by {@link TargetSource TargetSources}.
+ * <p>哪些家伙会佩戴这个“身份牌”？
+ * 1. AOP 代理对象本身（就是你平时 @Autowired 拿到的那个 Bean）。
+ * 2. 代理工厂（ProxyFactory，制造代理的机器）。
+ * 3. {@link TargetSource TargetSources}（负责从后厨把真实对象端出来的供应商）。
+ *
+ * (通过实现这个接口，Spring 内部工具就能轻易判断：这个 Bean 是不是代理？它原来是 UserServiceImpl 还是 OrderServiceImpl？)
  *
  * @author Juergen Hoeller
  * @since 2.0.3
@@ -32,9 +36,12 @@ import org.jspecify.annotations.Nullable;
 public interface TargetClassAware {
 
 	/**
-	 * Return the target class behind the implementing object
-	 * (typically a proxy configuration or an actual proxy).
-	 * @return the target Class, or {@code null} if not known
+	 * [核心方法]：亮出你的真实身份！
+	 *
+	 * 作用：返回在这个代理对象（Proxy）背后隐藏的、真正的业务类的 Class 对象。
+	 *
+	 * @return 返回目标类（例如 UserServiceImpl.class）。
+	 * 注意：如果仅仅是一个单纯的代理配置，还没确定具体的业务目标，或者实在找不到了，这里可能会返回 {@code null}。
 	 */
 	@Nullable Class<?> getTargetClass();
 

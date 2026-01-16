@@ -1,4 +1,4 @@
-package org.springframework.spring_reading.CglibProxy;
+package org.springframework.spring_reading.aop.JdkProxy;
 
 public class MyServiceImpl implements MyService {
 

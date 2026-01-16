@@ -3,8 +3,8 @@ package org.springframework.spring_reading.AopProxyFactory;
 import org.springframework.aop.framework.AdvisedSupport;
 import org.springframework.aop.framework.AopProxyFactory;
 import org.springframework.aop.framework.DefaultAopProxyFactory;
-import org.springframework.spring_reading.JdkProxy.MyService;
-import org.springframework.spring_reading.JdkProxy.MyServiceImpl;
+import org.springframework.spring_reading.aop.JdkProxy.MyService;
+import org.springframework.spring_reading.aop.JdkProxy.MyServiceImpl;
 
 public class AopProxyFactoryDemo {
 

@@ -174,7 +174,7 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 		Object target = null;
 
 		try {
-			/*
+			/**
 			 * ============================================================
 			 * 1. 处理 Object 类的基本方法 (equals, hashCode)
 			 * ============================================================
@@ -189,11 +189,12 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 				// 目标对象未实现 hashCode() 方法
 				return hashCode();
 			}
-			/*
+			/**
 			 * ============================================================
-			 * 2. 处理 Spring 内部配置接口的方法，Spring 框架内部进行类型检查
+			 * 2. 处理 Spring 内部配置接口的方法
 			 * ============================================================
 			 */
+			// 当前调用的方法是 ProxyConfig 接口的方法时
 			else if (method.getDeclaringClass() == DecoratingProxy.class) {
 				// 这是一个内部标记接口，用于查询“bean到底代理了谁？”
 				return AopProxyUtils.ultimateTargetClass(this.advised);

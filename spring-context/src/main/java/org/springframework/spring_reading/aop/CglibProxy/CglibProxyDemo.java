@@ -1,4 +1,4 @@
-package org.springframework.spring_reading.CglibProxy;
+package org.springframework.spring_reading.aop.CglibProxy;
 
 import org.springframework.cglib.proxy.Enhancer;
 

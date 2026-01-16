@@ -1,9 +1,9 @@
-package org.springframework.spring_reading.AopProxy;
+package org.springframework.spring_reading.aop.AopProxy;
 
 import org.springframework.aop.framework.AdvisedSupport;
 import org.springframework.aop.framework.AopProxy;
-import org.springframework.spring_reading.JdkProxy.MyService;
-import org.springframework.spring_reading.JdkProxy.MyServiceImpl;
+import org.springframework.spring_reading.aop.JdkProxy.MyService;
+import org.springframework.spring_reading.aop.JdkProxy.MyServiceImpl;
 
 import java.lang.reflect.Constructor;
 
