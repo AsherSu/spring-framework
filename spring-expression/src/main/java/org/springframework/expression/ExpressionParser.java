@@ -17,9 +17,8 @@
 package org.springframework.expression;
 
 /**
- * Parses expression strings into compiled expressions that can be evaluated.
- *
- * <p>Supports parsing template expressions as well as standard expression strings.
+ * 解析表达式字符串，编译成可评估的表达式。
+ * 支持解析标准表达式字符串以及模板。
  *
  * @author Keith Donald
  * @author Andy Clement
@@ -28,31 +27,29 @@ package org.springframework.expression;
 public interface ExpressionParser {
 
 	/**
-	 * Parse the expression string and return an {@link Expression} object that
-	 * can be used for repeated evaluation.
-	 * <p>Examples:
+	 * 解析表达式字符串并返回一个可用于重复评估的 Expression 对象。
+	 * <p>一些例子:
 	 * <pre class="code">
 	 *     3 + 4
 	 *     name.firstName
 	 * </pre>
-	 * @param expressionString the raw expression string to parse
-	 * @return an {@code Expression} for the parsed expression
-	 * @throws ParseException if an exception occurred during parsing
+	 * @param expressionString 需要解析的原始表达式字符串
+	 * @return 已解析表达式的评估器
+	 * @throws ParseException 解析过程中发生的异常
 	 */
 	Expression parseExpression(String expressionString) throws ParseException;
 
 	/**
-	 * Parse the expression string and return an {@link Expression} object that
-	 * can be used for repeated evaluation.
-	 * <p>Examples:
+	 * 解析表达式字符串并返回一个可用于重复评估的 Expression 对象。
+	 * <p>一些例子:
 	 * <pre class="code">
 	 *     3 + 4
 	 *     name.firstName
 	 * </pre>
-	 * @param expressionString the raw expression string to parse
-	 * @param context a context for influencing the expression parsing routine
-	 * @return an {@code Expression} for the parsed expression
-	 * @throws ParseException if an exception occurred during parsing
+	 * @param expressionString 需要解析的原始表达式字符串
+	 * @param context 影响此表达式解析过程的上下文（可选）
+	 * @return 已解析表达式的评估器
+	 * @throws ParseException 解析过程中发生的异常
 	 */
 	Expression parseExpression(String expressionString, ParserContext context) throws ParseException;
 

@@ -386,13 +386,18 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	 */
 	@Override
 	public @Nullable Object getSuggestedValue(DependencyDescriptor descriptor) {
+		// 从字段的注解中尝试找到建议的值
 		Object value = findValue(descriptor.getAnnotations());
+
+		// 如果在字段上没有找到，则从方法的注解中尝试找到
 		if (value == null) {
 			MethodParameter methodParam = descriptor.getMethodParameter();
 			if (methodParam != null) {
 				value = findValue(methodParam.getMethodAnnotations());
 			}
 		}
+
+		// 返回建议的值，如果没有找到则返回null
 		return value;
 	}
 
@@ -400,13 +405,17 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	 * Determine a suggested value from any of the given candidate annotations.
 	 */
 	protected @Nullable Object findValue(Annotation[] annotationsToSearch) {
+		// 如果注解数组非空，则进入检查逻辑
 		if (annotationsToSearch.length > 0) {   // qualifier annotations have to be local
+			// 从注解数组中获取合并后的特定注解属性（这里的特定注解可能是@Value）
 			AnnotationAttributes attr = AnnotatedElementUtils.getMergedAnnotationAttributes(
 					AnnotatedElementUtils.forAnnotations(annotationsToSearch), this.valueAnnotationType);
+			// 如果找到了相应的注解属性，则提取它的值
 			if (attr != null) {
 				return extractValue(attr);
 			}
 		}
+		// 没有找到相应的注解属性或值，返回null
 		return null;
 	}
 
@@ -415,10 +424,15 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	 * @since 4.3
 	 */
 	protected Object extractValue(AnnotationAttributes attr) {
+		// 从注解属性中尝试获取'VALUE'（一般为"value"）的属性值
 		Object value = attr.get(AnnotationUtils.VALUE);
+
+		// 如果该属性值为空，那么抛出一个异常
 		if (value == null) {
 			throw new IllegalStateException("Value annotation must have a value attribute");
 		}
+
+		// 返回提取的值
 		return value;
 	}
 

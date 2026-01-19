@@ -132,20 +132,35 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 		checkExpressionLength(expressionString);
 
 		try {
+			// 设置当前表达式字符串
 			this.expressionString = expressionString;
+
+			// 对表达式字符串进行分词处理
 			Tokenizer tokenizer = new Tokenizer(expressionString);
 			this.tokenStream = tokenizer.process();
 			this.tokenStreamLength = this.tokenStream.size();
 			this.tokenStreamPointer = 0;
+
+			// 清空已构建节点的集合
 			this.constructedNodes.clear();
+
+			// 构建抽象语法树（AST）
 			SpelNodeImpl ast = eatExpression();
+
+			// 确保 AST 不为空
 			if (ast == null) {
 				throw new SpelParseException(this.expressionString, 0, SpelMessage.OOD);
 			}
+
+			// 检查是否还有未处理的令牌，如果有则抛出异常
 			Token t = peekToken();
+
+			// 确保已构建节点的集合为空
 			if (t != null) {
 				throw new SpelParseException(this.expressionString, t.startPos, SpelMessage.MORE_INPUT, toString(nextToken()));
 			}
+
+			// 创建并返回 SpEL 表达式对象
 			return new SpelExpression(expressionString, ast, this.configuration);
 		}
 		catch (InternalParseException ex) {

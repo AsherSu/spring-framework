@@ -1034,16 +1034,25 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	//解析字符串中的嵌入式值（占位符和表达式）
 	@Override
 	public @Nullable String resolveEmbeddedValue(@Nullable String value) {
+		// 如果传入的值为空，直接返回null
 		if (value == null) {
 			return null;
 		}
+		// 初始化结果为传入的值
 		String result = value;
+
+		// 遍历当前对象中所有的字符串值解析器
 		for (StringValueResolver resolver : this.embeddedValueResolvers) {
+			// 使用解析器解析当前的结果值
 			result = resolver.resolveStringValue(result);
+
+			// 如果解析后的值为空，直接返回null
 			if (result == null) {
 				return null;
 			}
 		}
+
+		// 返回最终解析后的字符串值
 		return result;
 	}
 
@@ -1821,28 +1830,21 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * @see #setBeanExpressionResolver 设置表达式解析器的方法
 	 */
 	protected @Nullable Object evaluateBeanDefinitionString(@Nullable String value, @Nullable BeanDefinition beanDefinition) {
-		// 如果没有配置表达式解析器，则直接返回原始值
-		// 表达式解析器通常在ApplicationContext初始化时设置
+		// 如果没有设置beanExpressionResolver（即解析表达式的解析器），直接返回原始值
 		if (this.beanExpressionResolver == null) {
 			return value;
 		}
 
-		// 构建表达式求值的上下文环境
-		Scope scope = null;
+		Scope scope = null; // 定义作用域变量
 		if (beanDefinition != null) {
-			// 从Bean定义中获取作用域名称（如singleton、prototype、session等）
+			// 从Bean定义中获取作用域名称
 			String scopeName = beanDefinition.getScope();
 			if (scopeName != null) {
-				// 根据作用域名称获取对应的Scope实例
-				// 这个Scope对象可以提供作用域相关的���量和方法给表达式使用
+				// 获取该作用域的具体实例
 				scope = getRegisteredScope(scopeName);
 			}
 		}
-
-		// 使用表达式解析器对字符串进行求值
-		// BeanExpressionContext包含了求值所需的上下文信息：
-		// - this: 当前的BeanFactory实例，表达式可以通过它访问其他Bean
-		// - scope: 作用域对象，提供作用域相关的上下文
+		// 使用beanExpressionResolver对字符串值进行求值，并返回结果
 		return this.beanExpressionResolver.evaluate(value, new BeanExpressionContext(this, scope));
 	}
 

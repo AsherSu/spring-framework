@@ -44,22 +44,6 @@ import org.springframework.util.ObjectUtils;
  * @author Juergen Hoeller
  * @since 2.5
  */
-//统一封装注入点：将构造函数参数、方法参数或字段进行统一封装，提供对它们元数据的统一访问接口
-//
-//依赖描述信息：存储和管理依赖注入所需的关键信息，包括：
-//声明类（declaringClass）
-//方法名和参数类型
-//字段名
-//是否必需（required）
-//是否急切加载（eager）
-//嵌套级别（nestingLevel）
-//类型解析：提供 ResolvableType 和 TypeDescriptor 的构建，支持复杂泛型类型的解析
-//
-//依赖解析策略：
-//resolveNotUnique() - 处理非唯一bean的场景
-//resolveShortcut() - 提供快捷解析路径
-//resolveCandidate() - 从工厂解析候选bean实例
-//序列化支持：实现了 Serializable 接口，支持依赖描述符的序列化和反序列化
 @SuppressWarnings("serial")
 public class DependencyDescriptor extends InjectionPoint implements Serializable {
 

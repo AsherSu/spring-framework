@@ -99,36 +99,41 @@ class TypeConverterDelegate {
 	}
 
 	/**
-	 * Convert the value to the required type (if necessary from a String),
-	 * for the specified property.
-	 * @param propertyName name of the property
-	 * @param oldValue the previous value, if available (may be {@code null})
-	 * @param newValue the proposed new value
-	 * @param requiredType the type we must convert to
-	 * (or {@code null} if not known, for example in case of a collection element)
-	 * @param typeDescriptor the descriptor for the target property or field
-	 * @return the new value, possibly the result of type conversion
-	 * @throws IllegalArgumentException if type conversion failed
+	 * 将值转换为所需的类型（如果需要，从字符串），对于指定的属性。
+	 *
+	 * @param propertyName 属性名称
+	 * @param oldValue 之前的值（如果可用）（可能是 {@code null}）
+	 * @param newValue 建议的新值
+	 * @param requiredType 我们必须转换成的类型（如果未知，则为 {@code null}，例如集合元素）
+	 * @param typeDescriptor 目标属性或字段的描述符
+	 * @return 可能是类型转换的结果
+	 * 如果类型转换失败则抛出@IllegalArgumentException
 	 */
 	@SuppressWarnings("unchecked")
 	public <T> @Nullable T convertIfNecessary(@Nullable String propertyName, @Nullable Object oldValue, @Nullable Object newValue,
 			@Nullable Class<T> requiredType, @Nullable TypeDescriptor typeDescriptor) throws IllegalArgumentException {
 
-		// Custom editor for this type?
+		// 1. 查找自定义编辑器 (Legacy 方式)
+		// 首先检查有没有为这个特定的类或属性注册了 PropertyEditor。
+		// 这通常处理像 "2023-01-01" -> Date 这种基于 String 的转换。
 		PropertyEditor editor = this.propertyEditorRegistry.findCustomEditor(requiredType, propertyName);
 
 		ConversionFailedException conversionAttemptEx = null;
 
-		// No custom editor but custom ConversionService specified?
+		// 2. 尝试使用 ConversionService (Modern 方式)
+		// 如果没有找到特定的 Editor，但配置了全局的 ConversionService (Spring 3.0+)，尝试用它。
+		// 这部分优先级很高，但只有在没有 CustomEditor 时才触发（保证向后兼容）。
 		ConversionService conversionService = this.propertyEditorRegistry.getConversionService();
 		if (editor == null && conversionService != null && newValue != null && typeDescriptor != null) {
 			TypeDescriptor sourceTypeDesc = TypeDescriptor.forObject(newValue);
+			// 检查是否能转换 (例如 String -> Integer)
 			if (conversionService.canConvert(sourceTypeDesc, typeDescriptor)) {
 				try {
+					// 执行转换并直接返回！
 					return (T) conversionService.convert(newValue, sourceTypeDesc, typeDescriptor);
 				}
 				catch (ConversionFailedException ex) {
-					// fallback to default conversion logic below
+					// 如果转换失败（比如格式错误），记录异常，后续尝试兜底逻辑
 					conversionAttemptEx = ex;
 				}
 			}
@@ -136,33 +141,47 @@ class TypeConverterDelegate {
 
 		Object convertedValue = newValue;
 
-		// Value not of required type?
+		// 3. 进入核心转换逻辑
+		// 条件：存在 Editor，或者 类型不匹配（需要转换）
 		if (editor != null || (requiredType != null && !ClassUtils.isAssignableValue(requiredType, convertedValue))) {
+
+			// 3.1 特殊处理集合类型的元素 (Array/Collection)
+			// 如果目标是 Collection，且源是 String，Spring 会尝试把它按照逗号分割成数组。
+			// 例如：value="a,b,c" -> requiredType=List<String>
 			if (typeDescriptor != null && requiredType != null && Collection.class.isAssignableFrom(requiredType)) {
 				TypeDescriptor elementTypeDesc = typeDescriptor.getElementTypeDescriptor();
 				if (elementTypeDesc != null) {
 					Class<?> elementType = elementTypeDesc.getType();
 					if (convertedValue instanceof String text) {
+						// 如果泛型是 Class 或 Enum，先切割字符串
 						if (Class.class == elementType || Enum.class.isAssignableFrom(elementType)) {
 							convertedValue = StringUtils.commaDelimitedListToStringArray(text);
 						}
+						// 如果没有特定 Editor，找默认的 Editor（例如处理 int[] 的 Editor）
 						if (editor == null && String.class != elementType) {
 							editor = findDefaultEditor(elementType.arrayType());
 						}
 					}
 				}
 			}
+
+			// 3.2 查找默认编辑器 (Fallback)
+			// 如果之前没找到 CustomEditor，这里查找 JDK 默认的 Editor (如 int, boolean 等)
 			if (editor == null) {
 				editor = findDefaultEditor(requiredType);
 			}
+
+			// 3.3 执行转换 (核心方法 doConvertValue)
+			// 这里会调用 editor.setAsText() 或 editor.setValue()
 			convertedValue = doConvertValue(oldValue, convertedValue, requiredType, editor);
 		}
 
 		boolean standardConversion = false;
 
+		// 尝试应用标准类型转换规则（如果适用）
 		if (requiredType != null) {
-			// Try to apply some standard type conversion rules if appropriate.
 
+			// 对不同类型的专门转换逻辑
 			if (convertedValue != null) {
 				if (Object.class == requiredType) {
 					return (T) convertedValue;

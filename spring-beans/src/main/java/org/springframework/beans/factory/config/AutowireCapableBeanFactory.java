@@ -372,15 +372,21 @@ public interface AutowireCapableBeanFactory extends BeanFactory {
 	Object resolveBeanByName(String name, DependencyDescriptor descriptor) throws BeansException;
 
 	/**
-	 * Resolve the specified dependency against the beans defined in this factory.
-	 * @param descriptor the descriptor for the dependency (field/method/constructor)
-	 * @param requestingBeanName the name of the bean which declares the given dependency
-	 * @return the resolved object, or {@code null} if none found
-	 * @throws NoSuchBeanDefinitionException if no matching bean was found
-	 * @throws NoUniqueBeanDefinitionException if more than one matching bean was found
-	 * @throws BeansException if dependency resolution failed for any other reason
+	 * 在此工厂中定义的 beans 之间，解析指定的依赖项。
+	 *
+	 * 该方法尝试匹配和返回一个适当的 bean 实例来满足给定的依赖描述符。
+	 * 依赖描述符可以描述字段、方法或构造函数中的依赖。
+	 *
+	 * @param descriptor 描述依赖的对象，提供有关依赖类型、限定符等的详细信息。
+	 * @param requestingBeanName 声明或请求依赖的 bean 的名称。这通常用于解决 bean 之间的循环依赖。
+	 * @return 对应的 bean 实例以满足该依赖，如果没有合适的匹配，则返回 null。
+	 *
+	 * @throws NoSuchBeanDefinitionException 当没有找到匹配的 bean 时抛出。
+	 * @throws NoUniqueBeanDefinitionException 当存在多个可能的匹配并且没有明确的选择时抛出。
+	 * @throws BeansException 如果由于其他原因解析失败则抛出。
+	 *
 	 * @since 2.5
-	 * @see #resolveDependency(DependencyDescriptor, String, Set, TypeConverter)
+	 * @see #resolveDependency(DependencyDescriptor, String, Set, TypeConverter) 用于更复杂的依赖解析场景，允许传递排除的 beans 和类型转换器。
 	 */
 	@Nullable Object resolveDependency(DependencyDescriptor descriptor, @Nullable String requestingBeanName) throws BeansException;
 

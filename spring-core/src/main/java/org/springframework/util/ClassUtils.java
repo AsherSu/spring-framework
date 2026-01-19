@@ -629,12 +629,10 @@ public abstract class ClassUtils {
 	}
 
 	/**
-	 * Determine if the given type is assignable from the given value,
-	 * assuming setting by reflection. Considers primitive wrapper classes
-	 * as assignable to the corresponding primitive types.
-	 * @param type the target type
-	 * @param value the value that should be assigned to the type
-	 * @return if the type is assignable from the value
+	 * 确定给定类型是否可以从给定值分配，假设通过反射设置。考虑原始包装类可分配给相应的原始类型。
+	 * @param type 目标类型
+	 * @param value 应分配给类型的值
+	 * @return 如果类型可从值分配
 	 */
 	public static boolean isAssignableValue(Class<?> type, @Nullable Object value) {
 		Assert.notNull(type, "Type must not be null");
