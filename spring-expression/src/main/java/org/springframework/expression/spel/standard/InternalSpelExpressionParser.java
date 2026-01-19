@@ -183,26 +183,39 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 	//      | (ELVIS^ expression))?;
 	@SuppressWarnings("NullAway") // Not null assertion performed in SpelNodeImpl constructor
 	private @Nullable SpelNodeImpl eatExpression() {
+		// 解析逻辑或表达式
 		SpelNodeImpl expr = eatLogicalOrExpression();
+		// 获取下一个令牌
 		Token t = peekToken();
 		if (t != null) {
+			// 如果下一个令牌是赋值操作符 "="
 			if (t.kind == TokenKind.ASSIGN) {  // a=b
+				// 如果逻辑或表达式为空，则构造一个空字面量节点
 				if (expr == null) {
 					expr = new NullLiteral(t.startPos - 1, t.endPos - 1);
 				}
+				// 消耗赋值操作符
 				nextToken();
+				// 解析赋值操作符右侧的逻辑或表达式
 				SpelNodeImpl assignedValue = eatLogicalOrExpression();
+				// 构造赋值节点
 				return new Assign(t.startPos, t.endPos, expr, assignedValue);
 			}
+			// 如果下一个令牌是 Elvis 操作符 "?:"
 			if (t.kind == TokenKind.ELVIS) {  // a?:b (a if it isn't null, otherwise b)
+				// 如果逻辑或表达式为空，则构造一个空字面量节点
 				if (expr == null) {
 					expr = new NullLiteral(t.startPos - 1, t.endPos - 2);
 				}
+				// 消耗 Elvis 操作符
 				nextToken();  // elvis has left the building
+				// 解析 Elvis 操作符右侧的表达式
 				SpelNodeImpl valueIfNull = eatExpression();
+				// 如果右侧表达式为空，则构造一个空字面量节点
 				if (valueIfNull == null) {
 					valueIfNull = new NullLiteral(t.startPos + 1, t.endPos + 1);
 				}
+				// 构造 Elvis 节点
 				return new Elvis(t.startPos, t.endPos, expr, valueIfNull);
 			}
 			if (t.kind == TokenKind.QMARK) {  // a?b:c
@@ -221,25 +234,39 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 
 	//logicalOrExpression : logicalAndExpression (OR^ logicalAndExpression)*;
 	private @Nullable SpelNodeImpl eatLogicalOrExpression() {
+		// 解析逻辑与表达式
 		SpelNodeImpl expr = eatLogicalAndExpression();
+		// 循环解析逻辑或操作
 		while (peekIdentifierToken("or") || peekToken(TokenKind.SYMBOLIC_OR)) {
+			// 获取当前操作符令牌并消耗
 			Token t = takeToken();  //consume OR
+			// 解析逻辑与表达式的右操作数
 			SpelNodeImpl rhExpr = eatLogicalAndExpression();
+			// 检查操作数有效性
 			checkOperands(t, expr, rhExpr);
+			// 构造逻辑或操作节点
 			expr = new OpOr(t.startPos, t.endPos, expr, rhExpr);
 		}
+		// 返回解析得到的逻辑或表达式节点
 		return expr;
 	}
 
 	// logicalAndExpression : relationalExpression (AND^ relationalExpression)*;
 	private @Nullable SpelNodeImpl eatLogicalAndExpression() {
+		// 解析关系表达式
 		SpelNodeImpl expr = eatRelationalExpression();
+		// 循环解析逻辑与操作
 		while (peekIdentifierToken("and") || peekToken(TokenKind.SYMBOLIC_AND)) {
+			// 获取当前操作符令牌并消耗
 			Token t = takeToken();  // consume 'AND'
+			// 解析关系表达式的右操作数
 			SpelNodeImpl rhExpr = eatRelationalExpression();
+			// 检查操作数有效性
 			checkOperands(t, expr, rhExpr);
+			// 构造逻辑与操作节点
 			expr = new OpAnd(t.startPos, t.endPos, expr, rhExpr);
 		}
+		// 返回解析得到的逻辑与表达式节点
 		return expr;
 	}
 

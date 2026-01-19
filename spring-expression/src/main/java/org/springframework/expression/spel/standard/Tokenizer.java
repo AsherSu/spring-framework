@@ -85,12 +85,17 @@ class Tokenizer {
 	}
 
 
+	// dfa
 	public List<Token> process() {
+		// 循环处理输入字符，直到到达输入字符串的末尾
 		while (this.pos < this.max) {
+			// 获取当前位置的字符
 			char ch = this.charsToProcess[this.pos];
+			// 如果是字母，则解析标识符
 			if (isAlphabetic(ch)) {
 				lexIdentifier();
 			}
+			// 处理运算符和分隔符
 			else {
 				switch (ch) {
 					case '+':
