@@ -1512,18 +1512,17 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	protected RootBeanDefinition getMergedBeanDefinition(String beanName, BeanDefinition bd)
 			throws BeanDefinitionStoreException {
 
-		// 为给定的Bean名称和Bean定义获取一个合并的RootBeanDefinition，
-		// 由于这个版本的方法没有提供一个父Bean定义，所以我们传递null作为第三个参数。
+		// 为给定的 BeanName 和 BeanDefinition 获取一个合并的 RootBeanDefinition，
+		// 由于这个版本的方法没有提供一个 父Bean定义 ，所以我们传递null作为第三个参数。
 		return getMergedBeanDefinition(beanName, bd, null);
 	}
 
 	/**
-	 * 为给定的 bean 返回一个 RootBeanDefinition，如果给定 bean 的定义是一个子 bean 定义，
-	 * 则通过与父 bean 定义合并来生成。
+	 * 为给定的 bean 返回一个 RootBeanDefinition，如果给定 bean定义 是一个子 bean定义，
+	 * 则通过与 父bean定义 合并来生成。
 	 * @param beanName bean 定义的名称
 	 * @param bd 原始 bean 定义（Root/ChildBeanDefinition）
-	 * @param containingBd 外部bean，（内部bean，只能被单个bean使用，没有beanId，即 bean 创建时，new 出来的对象作为内部bean。
-	 *                     外部bean则为持有这个内部bean的bean） 如果是顶级 bean 则为 {@code null}
+	 * @param containingBd 外部bean（持有这个{@param beanName}的bean） 如果是顶级 bean 则为 {@code null}
 	 * @return 给定 bean 的（可能合并后的）RootBeanDefinition
 	 * @throws BeanDefinitionStoreException 如果 bean 定义无效
 	 */
@@ -1541,7 +1540,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				mbd = this.mergedBeanDefinitions.get(beanName);
 			}
 
-			// 3. 如果bean定义未被合并或已过期，进行合并操作。
+			// 3. 如果bd未被合并或已过期，进行合并操作。
 			if (mbd == null || mbd.stale) {
 				previous = mbd;
 				// 没有 父beanDefinition
@@ -1601,7 +1600,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 			}
 
-			// 9. 如果之前存在一个bean定义，复制相关的缓存。
+			// 9. 如果之前存在一个bean定义，复制相关的缓存。 针对过期的情况
 			if (previous != null) {
 				// 在一定情况下，使用之前的缓存 减少反射造成的资源消耗
 				copyRelevantMergedBeanDefinitionCaches(previous, mbd);

@@ -88,8 +88,10 @@ final class PostProcessorRegistrationDelegate {
 			List<BeanFactoryPostProcessor> regularPostProcessors = new ArrayList<>();
 			List<BeanDefinitionRegistryPostProcessor> registryProcessors = new ArrayList<>();
 
+			// 5.1 首先处理编程方式添加的BeanFactoryPostProcessor
 			for (BeanFactoryPostProcessor postProcessor : beanFactoryPostProcessors) {
 				if (postProcessor instanceof BeanDefinitionRegistryPostProcessor registryProcessor) {
+					// 立即执行BeanDefinitionRegistryPostProcessor
 					registryProcessor.postProcessBeanDefinitionRegistry(registry);
 					registryProcessors.add(registryProcessor);
 				}
@@ -98,13 +100,14 @@ final class PostProcessorRegistrationDelegate {
 				}
 			}
 
-			// Do not initialize FactoryBeans here: We need to leave all regular beans
-			// uninitialized to let the bean factory post-processors apply to them!
-			// Separate between BeanDefinitionRegistryPostProcessors that implement
-			// PriorityOrdered, Ordered, and the rest.
+			// 千万不要在这里初始化 FactoryBeans（以及它们生产的 Bean）。
+			// 我们需要保持所有常规 Bean 处于未初始化状态。
+			// 原因： 因为接下来的步骤（运行 PostProcessors）正是要去修改、补充或配置这些常规 Bean 的定义。
+			// 如果现在就因为查找处理器而不小心把常规 Bean 创建出来了，那么这些 Bean 就错过了被修改的机会
+			// （例如，错过了属性注入、AOP 配置等），导致配置不生效。
 			List<BeanDefinitionRegistryPostProcessor> currentRegistryProcessors = new ArrayList<>();
 
-			// First, invoke the BeanDefinitionRegistryPostProcessors that implement PriorityOrdered.
+			// 5.2.1 首先：实现PriorityOrdered接口的
 			String[] postProcessorNames =
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {

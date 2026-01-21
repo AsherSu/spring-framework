@@ -21,33 +21,34 @@ import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 
 /**
- * Extension to the standard {@link BeanFactoryPostProcessor} SPI, allowing for
- * the registration of further bean definitions <i>before</i> regular
- * BeanFactoryPostProcessor detection kicks in. In particular,
- * BeanDefinitionRegistryPostProcessor may register further bean definitions
- * which in turn define BeanFactoryPostProcessor instances.
+ * 相对于标准的 {@link BeanFactoryPostProcessor} SPI 的扩展，
+ * 允许在常规 BeanFactoryPostProcessor 检测启动之前 注册更多的 bean 定义。
+ * 特别地，BeanDefinitionRegistryPostProcessor 可以注册进一步的 bean 定义，
+ * 这些定义可能会进一步定义 BeanFactoryPostProcessor 实例。
  *
- * @author Juergen Hoeller
- * @since 3.0.1
- * @see org.springframework.context.annotation.ConfigurationClassPostProcessor
+ * 作者：Juergen Hoeller
+ * 自版本：3.0.1 起
+ * 参见：org.springframework.context.annotation.ConfigurationClassPostProcessor
  */
 public interface BeanDefinitionRegistryPostProcessor extends BeanFactoryPostProcessor {
 
 	/**
-	 * Modify the application context's internal bean definition registry after its
-	 * standard initialization. All regular bean definitions will have been loaded,
-	 * but no beans will have been instantiated yet. This allows for adding further
-	 * bean definitions before the next post-processing phase kicks in.
-	 * @param registry the bean definition registry used by the application context
-	 * @throws org.springframework.beans.BeansException in case of errors
+	 * 在其标准初始化之后，修改应用上下文的内部 bean 定义注册表。
+	 * 此时，所有常规的 bean 定义都已经被加载，但还没有 bean 被实例化。
+	 * 这允许在下一后处理阶段开始之前，添加更多的 bean 定义。
+	 *
+	 * @param registry 应用上下文使用的 bean 定义注册表
+	 * @throws org.springframework.beans.BeansException 如果发生错误
 	 */
 	void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException;
 
 	/**
-	 * Empty implementation of {@link BeanFactoryPostProcessor#postProcessBeanFactory}
-	 * since custom {@code BeanDefinitionRegistryPostProcessor} implementations will
-	 * typically only provide a {@link #postProcessBeanDefinitionRegistry} method.
-	 * @since 6.1
+	 * 在应用上下文的内部bean工厂进行其标准初始化后修改它。
+	 * 此时，所有bean定义都已加载，但尚未实例化任何bean。
+	 * 这允许用户即使对于急切初始化的beans也可以覆盖或添加属性。
+	 *
+	 * @param beanFactory 应用上下文使用的bean工厂
+	 * @throws org.springframework.beans.BeansException 如果发生错误
 	 */
 	@Override
 	default void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
