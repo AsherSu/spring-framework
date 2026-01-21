@@ -211,10 +211,10 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	/** List of names of manually registered singletons, in registration order. */
 	private volatile Set<String> manualSingletonNames = new LinkedHashSet<>(16);
 
-	/** Cached array of bean definition names in case of frozen configuration. */
+	/** 在冻结配置的情况下缓存 bean 定义名称数组。 */
 	private volatile String @Nullable [] frozenBeanDefinitionNames;
 
-	/** Whether bean definition metadata may be cached for all beans. */
+	/** 是否可以为所有 bean 缓存 bean 定义元数据。 */
 	private volatile boolean configurationFrozen;
 
 	/** Name prefix of main thread: only set during pre-instantiation phase. */
@@ -1114,8 +1114,10 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		this.preInstantiationThread.set(PreInstantiation.MAIN);
 		this.mainThreadPrefix = getThreadNamePrefix();
 		try {
+			// 遍历所有Bean定义
 			for (String beanName : beanNames) {
 				RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
+
 				// 条件：非抽象类、单例
 				if (!mbd.isAbstract() && mbd.isSingleton()) {
 					CompletableFuture<?> future = preInstantiateSingleton(beanName, mbd);
@@ -1140,8 +1142,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			}
 		}
 
-		// 当所有非延迟加载的单例 Bean 都初始化完成后，
-		// 给特定的 SmartInitializingSingleton Bean 一个“最后通知”的机会
+		// 回调所有SmartInitializingSingleton
+		// 当所有非延迟加载的单例 Bean 都初始化完成后，给特定的 SmartInitializingSingleton Bean 一个“最后通知”的机会
 		for (String beanName : beanNames) {
 			Object singletonInstance = getSingleton(beanName, false);
 			if (singletonInstance instanceof SmartInitializingSingleton smartSingleton) {

@@ -94,7 +94,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	/** 早期单例对象的缓存：Bean 名称到 早期Bean实例  二级缓存*/
 	private final Map<String, Object> earlySingletonObjects = new ConcurrentHashMap<>(16);
 
-	/** Set of registered singletons, containing the bean names in registration order. */
+	/** 一组已注册的单例，包含按注册顺序排列的 Bean 名称。*/
 	private final Set<String> registeredSingletons = Collections.synchronizedSet(new LinkedHashSet<>(256));
 
 	/** 正在创建中的 Bean 名称集合。 */
