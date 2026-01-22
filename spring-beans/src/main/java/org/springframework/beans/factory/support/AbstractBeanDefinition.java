@@ -584,11 +584,11 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 		this.backgroundInit = backgroundInit;
 	}
 
-	/**
-	 * Return the bootstrap mode for this bean: default is {@code false} for using
-	 * the main pre-instantiation thread for non-lazy singleton beans and the caller
-	 * thread for prototype beans.
-	 * @since 6.2
+/**
+	 * 返回此bean的引导模式：默认为{@code false}以供使用
+	 * 非惰性单例 bean 和调用者的主预实例化线程
+	 * 原型bean 的线程。
+	 * @自 6.2 起
 	 */
 	public boolean isBackgroundInit() {
 		return this.backgroundInit;
@@ -857,7 +857,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	}
 
 	/**
-	 * Return a callback for creating an instance of the bean, if any.
+	 * 返回用于创建 bean 实例的回调（如果有）。
 	 * @since 5.0
 	 */
 	public @Nullable Supplier<?> getInstanceSupplier() {

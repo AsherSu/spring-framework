@@ -135,39 +135,45 @@ class ConstructorResolver {
 	public BeanWrapper autowireConstructor(String beanName, RootBeanDefinition mbd,
 			Constructor<?> @Nullable [] chosenCtors, @Nullable Object @Nullable [] explicitArgs) {
 
+		// 1. 初始化 BeanWrapper，它是 Bean 实例的包装器
 		BeanWrapperImpl bw = new BeanWrapperImpl();
 		this.beanFactory.initBeanWrapper(bw);
 
-		Constructor<?> constructorToUse = null;
-		ArgumentsHolder argsHolderToUse = null;
-		@Nullable Object[] argsToUse = null;
+		Constructor<?> constructorToUse = null; // 最终选定的构造函数
+		ArgumentsHolder argsHolderToUse = null; // 最终选定的参数持有者
+		@Nullable Object[] argsToUse = null;    // 最终用于调用的参数数组
 
+		// 2. 处理显式传递参数的情况 (比如调用 context.getBean(name, args))
 		if (explicitArgs != null) {
 			argsToUse = explicitArgs;
 		}
 		else {
+			// 3. 尝试从缓存获取
 			Object[] argsToResolve = null;
 			synchronized (mbd.constructorArgumentLock) {
+				// 如果之前已经解析过这个 Bean (Prototype)，直接拿缓存的构造函数
 				constructorToUse = (Constructor<?>) mbd.resolvedConstructorOrFactoryMethod;
 				if (constructorToUse != null && mbd.constructorArgumentsResolved) {
 					// Found a cached constructor...
-					argsToUse = mbd.resolvedConstructorArguments;
+					argsToUse = mbd.resolvedConstructorArguments; // 已解析好的参数
 					if (argsToUse == null) {
-						argsToResolve = mbd.preparedConstructorArguments;
+						argsToResolve = mbd.preparedConstructorArguments; // 原始参数定义
 					}
 				}
 			}
+			// 如果缓存了原始参数，进行解析 (例如将 ref="user" 解析为 User 对象)
 			if (argsToResolve != null) {
 				argsToUse = resolvePreparedArguments(beanName, mbd, bw, constructorToUse, argsToResolve);
 			}
 		}
 
 		if (constructorToUse == null || argsToUse == null) {
-			// Take specified constructors, if any.
+			// 4. 获取候选构造函数
 			Constructor<?>[] candidates = chosenCtors;
 			if (candidates == null) {
 				Class<?> beanClass = mbd.getBeanClass();
 				try {
+					// 根据配置决定是否允许访问非 public 构造函数
 					candidates = (mbd.isNonPublicAccessAllowed() ?
 							beanClass.getDeclaredConstructors() : beanClass.getConstructors());
 				}
@@ -178,6 +184,8 @@ class ConstructorResolver {
 				}
 			}
 
+			// 5. 极简情况优化：只有一个无参构造函数
+			// 如果候选者只有一个，且没参数，且 XML 也没配参数 -> 直接用，不用走后面复杂流程
 			if (candidates.length == 1 && explicitArgs == null && !mbd.hasConstructorArgumentValues()) {
 				Constructor<?> uniqueCandidate = candidates[0];
 				if (uniqueCandidate.getParameterCount() == 0) {

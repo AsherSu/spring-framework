@@ -91,13 +91,13 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	/** Package-visible field for caching a resolved destroy method name (also for inferred). */
 	volatile @Nullable String resolvedDestroyMethodName;
 
-	/** Common lock for the four constructor fields below. */
+	/** 下面四个 构造函数字段 的公共锁。 */
 	final Object constructorArgumentLock = new Object();
 
-	/** Package-visible field for caching the resolved constructor or factory method. */
+	/** 用于 缓存解析 的 构造函数或工厂方法的包可见字段. */
 	@Nullable Executable resolvedConstructorOrFactoryMethod;
 
-	/** Package-visible field that marks the constructor arguments as resolved. */
+	/** 将 构造函数参数 标记为 已解析的包可见字段。 */
 	boolean constructorArgumentsResolved = false;
 
 	/** Package-visible field for caching fully resolved constructor arguments. */
