@@ -278,18 +278,26 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	}
 
 	/**
-	 * Create a proxy with the configured interceptors if the bean is
-	 * identified as one to proxy by the subclass.
+	 * 如果子类确定要将该bean标识为需要代理的bean，则使用配置的拦截器创建代理。
 	 * @see #getAdvicesAndAdvisorsForBean
 	 */
 	@Override
 	public @Nullable Object postProcessAfterInitialization(@Nullable Object bean, String beanName) {
 		if (bean != null) {
+			// 根据给定的 bean的class和name构建一个key,格式：beanClassName_beanName
 			Object cacheKey = getCacheKey(bean.getClass(), beanName);
+
+			/**
+			 * 当bean被循环引用，并且被暴露了
+			 * 则会通过getEarlyBeanReference来创建代理类
+			 * 通过判断earlyProxyReferences中是否存在beanName来决定是否需要对target进行动态代理
+			 */
 			if (this.earlyBeanReferences.remove(cacheKey) != bean) {
+				//该方法将会返回代理类
 				return wrapIfNecessary(bean, beanName, cacheKey);
 			}
 		}
+		// 返回bean
 		return bean;
 	}
 

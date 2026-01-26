@@ -94,13 +94,13 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	/** 下面四个 构造函数字段 的公共锁。 */
 	final Object constructorArgumentLock = new Object();
 
-	/** 用于 缓存解析 的 构造函数或工厂方法的包可见字段. */
+	/** 用于 缓存解析 的 构造函数或工厂方法。包可见字段. */
 	@Nullable Executable resolvedConstructorOrFactoryMethod;
 
-	/** 将 构造函数参数 标记为 已解析的包可见字段。 */
+	/** 将 构造函数参数 标记为 已解析。包可见字段。 */
 	boolean constructorArgumentsResolved = false;
 
-	/** Package-visible field for caching fully resolved constructor arguments. */
+	/** 最终的、可以直接传给 new 的实际 Java 对象 */
 	@Nullable Object @Nullable [] resolvedConstructorArguments;
 
 	/** Package-visible field for caching partly prepared constructor arguments. */

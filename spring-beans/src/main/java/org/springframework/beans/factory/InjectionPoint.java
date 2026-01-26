@@ -39,10 +39,8 @@ import org.springframework.util.ObjectUtils;
  * @see UnsatisfiedDependencyException#getInjectionPoint()
  * @see org.springframework.beans.factory.config.DependencyDescriptor
  */
-//精确定位：通过 Field 或 MethodParameter 对象准确描述注入发生的位置
-//错误诊断：当注入失败时，提供具体的错误位置信息
-//元数据访问：获取注入点的注解、类型等元信息
-//工厂方法支持：帮助工厂方法根据具体注入点创建合适的bean实例
+
+// 让被注入的 Bean（通常是 Prototype 作用域）能够“反向感知”是谁在依赖它，以及注入点上有什么元数据（如注解）
 public class InjectionPoint {
 
 	/** 方法参数的描述符，用于描述注入点在方法或构造函数参数上的情况 */
@@ -124,6 +122,7 @@ public class InjectionPoint {
 	 * Obtain the annotations associated with the wrapped field or method/constructor parameter.
 	 */
 	public Annotation[] getAnnotations() {
+		// 注入点的参数的注解
 		if (this.field != null) {
 			Annotation[] fieldAnnotations = this.fieldAnnotations;
 			if (fieldAnnotations == null) {
@@ -132,6 +131,7 @@ public class InjectionPoint {
 			}
 			return fieldAnnotations;
 		}
+		//注入点方法的参数的注解
 		else {
 			return obtainMethodParameter().getParameterAnnotations();
 		}

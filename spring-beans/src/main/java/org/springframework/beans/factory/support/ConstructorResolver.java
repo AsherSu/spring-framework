@@ -127,8 +127,7 @@ class ConstructorResolver {
 	 * @param beanName the name of the bean
 	 * @param mbd the merged bean definition for the bean
 	 * @param chosenCtors chosen candidate constructors (or {@code null} if none)
-	 * @param explicitArgs argument values passed in programmatically via the getBean method,
-	 * or {@code null} if none (-> use constructor argument values from bean definition)
+	 * @param explicitArgs 通过 getBean 方法以编程方式传入的参数值，或 {@code null} 如果没有，使用 bean 定义中的构造函数参数值
 	 * @return a BeanWrapper for the new instance
 	 */
 	@SuppressWarnings("NullAway") // Dataflow analysis limitation
@@ -199,7 +198,8 @@ class ConstructorResolver {
 				}
 			}
 
-			// Need to resolve the constructor.
+			// 6. 解析构造函数参数值 (从 XML 或 BeanDefinition 中)
+			// minNrOfArgs: 构造函数至少需要多少个参数
 			boolean autowiring = (chosenCtors != null ||
 					mbd.getResolvedAutowireMode() == AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR);
 			ConstructorArgumentValues resolvedValues = null;
@@ -211,11 +211,15 @@ class ConstructorResolver {
 			else {
 				ConstructorArgumentValues cargs = mbd.getConstructorArgumentValues();
 				resolvedValues = new ConstructorArgumentValues();
+				// resolveConstructorArguments 会将 XML 中的 value/ref 转化为运行时结构
 				minNrOfArgs = resolveConstructorArguments(beanName, mbd, bw, cargs, resolvedValues);
 			}
 
+			// 7. 关键步骤：排序
+			// 规则：public 优先，参数数量多的优先 (降序)
 			AutowireUtils.sortConstructors(candidates);
-			int minTypeDiffWeight = Integer.MAX_VALUE;
+
+			int minTypeDiffWeight = Integer.MAX_VALUE; // 记录最小的类型差异权重
 			Set<Constructor<?>> ambiguousConstructors = null;
 			Deque<UnsatisfiedDependencyException> causes = null;
 
@@ -825,6 +829,7 @@ class ConstructorResolver {
 	private @Nullable Object[] resolvePreparedArguments(String beanName, RootBeanDefinition mbd, BeanWrapper bw,
 			Executable executable, Object[] argsToResolve) {
 
+		// 准备解析所需的工具
 		TypeConverter customConverter = this.beanFactory.getCustomTypeConverter();
 		TypeConverter converter = (customConverter != null ? customConverter : bw);
 		BeanDefinitionValueResolver valueResolver =
@@ -836,36 +841,44 @@ class ConstructorResolver {
 			Object argValue = argsToResolve[argIndex];
 			Class<?> paramType = paramTypes[argIndex];
 			boolean convertNecessary = false;
+			// 构造器注入
 			if (argValue instanceof ConstructorDependencyDescriptor descriptor) {
 				try {
+					// 1. 尝试直接使用缓存的描述符解析参数
 					argValue = resolveAutowiredArgument(descriptor, paramType, beanName,
 							null, converter, true);
 				}
 				catch (BeansException ex) {
-					// Unexpected target bean mismatch for cached argument -> re-resolve
+					// 2. 如果缓存失效（例如目标 Bean 变了，导致类型不匹配），进入容错处理
 					Set<String> autowiredBeanNames = null;
 					if (descriptor.hasShortcut()) {
-						// Reset shortcut and try to re-resolve it in this thread...
+						// 清除快捷方式（缓存），准备重试
 						descriptor.setShortcut(null);
 						autowiredBeanNames = new LinkedHashSet<>(2);
 					}
 					logger.debug("Failed to resolve cached argument", ex);
+					// 3. 重新解析依赖
 					argValue = resolveAutowiredArgument(descriptor, paramType, beanName,
 							autowiredBeanNames, converter, true);
+
+					// 4. 如果重试成功，更新缓存（Shortcut）
 					if (autowiredBeanNames != null && !descriptor.hasShortcut()) {
 						// We encountered as stale shortcut before, and the shortcut has
 						// not been re-resolved by another thread in the meantime...
 						if (argValue != null) {
 							setShortcutIfPossible(descriptor, paramType, autowiredBeanNames);
 						}
+						// 注册依赖关系，确保 Bean 销毁顺序正确
 						registerDependentBeans(executable, beanName, autowiredBeanNames);
 					}
 				}
 			}
+			// xml 显式引用 (Explicit Reference) 或 集合注入
 			else if (argValue instanceof BeanMetadataElement) {
 				argValue = valueResolver.resolveValueIfNecessary("constructor argument", argValue);
 				convertNecessary = true;
 			}
+			// 字面量、占位符 (${}) 或 SpEL 表达式 (#{})
 			else if (argValue instanceof String text) {
 				argValue = this.beanFactory.evaluateBeanDefinitionString(text, mbd);
 				convertNecessary = true;
@@ -904,38 +917,54 @@ class ConstructorResolver {
 
 	/**
 	 * Resolve the specified argument which is supposed to be autowired.
+	 * 解析指定的参数，该参数预期是通过自动装配（Autowired）完成注入的。
 	 */
 	@Nullable Object resolveAutowiredArgument(DependencyDescriptor descriptor, Class<?> paramType, String beanName,
 			@Nullable Set<String> autowiredBeanNames, TypeConverter typeConverter, boolean fallback) {
 
+		// 1. 特殊处理：如果参数类型是 InjectionPoint
+		// InjectionPoint 接口允许 Bean 知道它正在被注入到哪个类的哪个字段或方法参数中。
+		// 这通常用于 prototype 作用域的 Bean 获取注入点元数据。
 		if (InjectionPoint.class.isAssignableFrom(paramType)) {
+			// 从 ThreadLocal 获取当前的注入点信息
 			InjectionPoint injectionPoint = currentInjectionPoint.get();
 			if (injectionPoint == null) {
+				// 如果获取不到，说明当前上下文不支持 InjectionPoint 注入，抛出异常
 				throw new IllegalStateException("No current InjectionPoint available for " + descriptor);
 			}
 			return injectionPoint;
 		}
 
 		try {
+			// 2. 核心逻辑：委托给 BeanFactory 去解析依赖
+			// 这里会执行实际的依赖查找逻辑（例如根据类型、名称查找 Bean，处理 @Primary, @Qualifier 等）
 			return this.beanFactory.resolveDependency(descriptor, beanName, autowiredBeanNames, typeConverter);
 		}
 		catch (NoUniqueBeanDefinitionException ex) {
+			// 3. 如果找到了多个符合条件的 Bean，且无法确定使用哪一个（没有 @Primary 等），直接抛出异常
 			throw ex;
 		}
 		catch (NoSuchBeanDefinitionException ex) {
+			// 4. 如果在容器中找不到符合条件的 Bean
 			if (fallback) {
-				// Single constructor or factory method -> let's return an empty array/collection
-				// for example, a vararg or a non-null List/Set/Map parameter.
+				// fallback 为 true 通常意味着这是单一构造函数或工厂方法，Spring 尝试宽容处理。
+				// 这里的逻辑是：如果是集合/数组类型的参数，且找不到 Bean，则注入一个空集合/空数组，而不是报错。
+
+				// 如果参数是数组类型 (e.g., MyBean[])，返回空数组
 				if (paramType.isArray()) {
 					return Array.newInstance(paramType.componentType(), 0);
 				}
+				// 如果参数是标准集合接口 (e.g., List<MyBean>, Set<MyBean>)，返回空集合
 				else if (CollectionFactory.isApproximableCollectionType(paramType)) {
 					return CollectionFactory.createCollection(paramType, 0);
 				}
+				// 如果参数是 Map 接口 (e.g., Map<String, MyBean>)，返回空 Map
 				else if (CollectionFactory.isApproximableMapType(paramType)) {
 					return CollectionFactory.createMap(paramType, 0);
 				}
 			}
+
+			// 如果不是 fallback 模式，或者参数不是集合/数组类型，则如实抛出“找不到 Bean”的异常
 			throw ex;
 		}
 	}

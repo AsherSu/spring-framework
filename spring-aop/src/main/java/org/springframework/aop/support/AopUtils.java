@@ -309,29 +309,36 @@ public abstract class AopUtils {
 	}
 
 	/**
-	 * Determine the sublist of the {@code candidateAdvisors} list
-	 * that is applicable to the given class.
-	 * @param candidateAdvisors the Advisors to evaluate
-	 * @param clazz the target class
-	 * @return sublist of Advisors that can apply to an object of the given class
-	 * (may be the incoming List as-is)
+	 * 确定 {@code candidateAdvisors} 列表中适用于给定类的子列表。
+	 * @param candidateAdvisors 要评估的顾问列表
+	 * @param clazz 目标类
+	 * @return 可应用于给定类的顾问子列表
+	 * （可能是原始列表）
 	 */
 	public static List<Advisor> findAdvisorsThatCanApply(List<Advisor> candidateAdvisors, Class<?> clazz) {
+		// 如果候选顾问列表为空，则直接返回空列表
 		if (candidateAdvisors.isEmpty()) {
 			return candidateAdvisors;
 		}
+		// 创建一个用于存储适用于给定类的顾问的列表
 		List<Advisor> eligibleAdvisors = new ArrayList<>();
+		// 遍历候选顾问列表
 		for (Advisor candidate : candidateAdvisors) {
+			// 如果候选顾问是引介顾问，并且可以应用于给定类，则将其添加到结果列表中
 			if (candidate instanceof IntroductionAdvisor && canApply(candidate, clazz)) {
 				eligibleAdvisors.add(candidate);
 			}
 		}
+		// 检查是否存在引介顾问
 		boolean hasIntroductions = !eligibleAdvisors.isEmpty();
+		// 继续遍历候选顾问列表
 		for (Advisor candidate : candidateAdvisors) {
+			// 如果候选顾问是引介顾问，则跳过
 			if (candidate instanceof IntroductionAdvisor) {
-				// already processed
+				// 已经处理过
 				continue;
 			}
+			// 如果候选顾问可以应用于给定类，则将其添加到结果列表中
 			if (canApply(candidate, clazz, hasIntroductions)) {
 				eligibleAdvisors.add(candidate);
 			}
