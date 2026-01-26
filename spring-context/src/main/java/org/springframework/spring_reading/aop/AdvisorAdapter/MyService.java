@@ -1,4 +1,4 @@
-package org.springframework.spring_reading.AdvisorAdapter;
+package org.springframework.spring_reading.aop.AdvisorAdapter;
 
 public class MyService {
 

@@ -1,4 +1,4 @@
-package org.springframework.spring_reading.AdvisorChainFactory;
+package org.springframework.spring_reading.aop.AdvisorChainFactory;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.springframework.aop.Advisor;

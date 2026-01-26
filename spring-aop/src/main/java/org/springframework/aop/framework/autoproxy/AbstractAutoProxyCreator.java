@@ -132,6 +132,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 	private final Map<Object, Class<?>> proxyTypes = new ConcurrentHashMap<>(16);
 
+	// 当前beanName是否需要被代理
 	private final Map<Object, Boolean> advisedBeans = new ConcurrentHashMap<>(256);
 
 

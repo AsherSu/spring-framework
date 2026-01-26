@@ -126,7 +126,7 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	}
 
 	/**
-	 * 搜索给定的候选顾问，找到所有适用于指定bean的顾问。
+	 * 搜索给定的候选Advisor，找到所有适用于指定bean的Advisor。
 	 * @param candidateAdvisors 候选顾问列表
 	 * @param beanClass 目标bean的类
 	 * @param beanName 目标bean的名称

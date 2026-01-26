@@ -227,49 +227,69 @@ public abstract class AopUtils {
 	}
 
 	/**
-	 * Can the given pointcut apply at all on the given class?
-	 * <p>This is an important test as it can be used to optimize
-	 * out a pointcut for a class.
-	 * @param pc the static or dynamic pointcut to check
-	 * @param targetClass the class to test
-	 * @param hasIntroductions whether the advisor chain
-	 * for this bean includes any introductions
-	 * @return whether the pointcut can apply on any method
+	 * 判断给定的切点（Pointcut）是否能够应用在给定的目标类上？
+	 * <p>这是一个重要的测试，用于优化步骤：如果一个切点对某个类完全不适用，
+	 * 就可以将该切点从该类的代理流程中排除。
+	 *
+	 * @param pc            要检查的静态或动态切点
+	 * @param targetClass   要测试的目标类
+	 * @param hasIntroductions 该 Bean 的顾问链（Advisor chain）中是否包含引介（Introductions）
+	 * （引介是指给类动态添加新的接口或方法）
+	 * @return 切点是否可以应用在目标类的【任意】一个方法上
 	 */
 	public static boolean canApply(Pointcut pc, Class<?> targetClass, boolean hasIntroductions) {
 		Assert.notNull(pc, "Pointcut must not be null");
+
+		// 1. 初步筛选：使用 ClassFilter 进行类级别的检查
+		// 如果切点的 ClassFilter 直接排除了这个目标类，那么其下的任何方法肯定都不匹配，直接返回 false。
 		if (!pc.getClassFilter().matches(targetClass)) {
 			return false;
 		}
 
 		MethodMatcher methodMatcher = pc.getMethodMatcher();
+		// 2. 快速优化：检查 MethodMatcher 是否为 "匹配所有" (MethodMatcher.TRUE)
+		// 如果该切点匹配该类（上面已通过），且匹配该类的所有方法，则无需遍历具体方法，直接返回 true。
 		if (methodMatcher == MethodMatcher.TRUE) {
 			// No need to iterate the methods if we're matching any method anyway...
 			return true;
 		}
 
+		// 3. 准备 IntroductionAwareMethodMatcher
+		// 某些特殊的匹配器（如 AspectJ 的表达式匹配器）需要感知 "引介" (Introductions)，
+		// 因为引介可能会改变类的方法结构。
 		IntroductionAwareMethodMatcher introductionAwareMethodMatcher = null;
 		if (methodMatcher instanceof IntroductionAwareMethodMatcher iamm) {
 			introductionAwareMethodMatcher = iamm;
 		}
 
+		// 4. 收集需要扫描的所有类和接口
+		// Spring AOP 不仅要检查类本身的方法，还要检查它实现的所有接口的方法（因为 JDK 动态代理是基于接口的）。
 		Set<Class<?>> classes = new LinkedHashSet<>();
+		// 如果不是 Proxy 类（即不是已经代理过的类），获取其原始的用户类（处理 CGLIB 包装的情况）
 		if (!Proxy.isProxyClass(targetClass)) {
 			classes.add(ClassUtils.getUserClass(targetClass));
 		}
+		// 将该类实现的所有接口也加入扫描列表
 		classes.addAll(ClassUtils.getAllInterfacesForClassAsSet(targetClass));
 
+		// 5. 遍历类和接口中的每一个方法
 		for (Class<?> clazz : classes) {
+			// 获取当前类/接口声明的所有方法
 			Method[] methods = ReflectionUtils.getAllDeclaredMethods(clazz);
 			for (Method method : methods) {
+				// 6. 执行方法匹配
+				// 只要找到【任何一个】匹配的方法，就说明这个切点适用于这个类，返回 true。
 				if (introductionAwareMethodMatcher != null ?
+						// 如果是特殊的匹配器，传入 hasIntroductions 参数进行判断
 						introductionAwareMethodMatcher.matches(method, targetClass, hasIntroductions) :
+						// 普通匹配器，只根据方法和目标类判断
 						methodMatcher.matches(method, targetClass)) {
 					return true;
 				}
 			}
 		}
 
+		// 7. 如果遍历了所有类和接口的所有方法，都没有找到匹配的，说明该切点完全不适用于该类。
 		return false;
 	}
 
@@ -316,20 +336,20 @@ public abstract class AopUtils {
 	 * （可能是原始列表）
 	 */
 	public static List<Advisor> findAdvisorsThatCanApply(List<Advisor> candidateAdvisors, Class<?> clazz) {
-		// 如果候选顾问列表为空，则直接返回空列表
+		// 如果候选Advisor列表为空，则直接返回空列表
 		if (candidateAdvisors.isEmpty()) {
 			return candidateAdvisors;
 		}
-		// 创建一个用于存储适用于给定类的顾问的列表
+		// 创建一个用于存储适用于给定类的Advisor的列表
 		List<Advisor> eligibleAdvisors = new ArrayList<>();
-		// 遍历候选顾问列表
+		// 遍历候选Advisor列表
 		for (Advisor candidate : candidateAdvisors) {
-			// 如果候选顾问是引介顾问，并且可以应用于给定类，则将其添加到结果列表中
+			// 如果候选Advisor是IntroductionAdvisor，并且可以应用于给定类，则将其添加到结果列表中
 			if (candidate instanceof IntroductionAdvisor && canApply(candidate, clazz)) {
 				eligibleAdvisors.add(candidate);
 			}
 		}
-		// 检查是否存在引介顾问
+		// 检查是否存在引介Advisor
 		boolean hasIntroductions = !eligibleAdvisors.isEmpty();
 		// 继续遍历候选顾问列表
 		for (Advisor candidate : candidateAdvisors) {

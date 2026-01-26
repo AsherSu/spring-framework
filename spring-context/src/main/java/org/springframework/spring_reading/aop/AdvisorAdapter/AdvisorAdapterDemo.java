@@ -1,4 +1,4 @@
-package org.springframework.spring_reading.AdvisorAdapter;
+package org.springframework.spring_reading.aop.AdvisorAdapter;
 
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.aop.framework.adapter.GlobalAdvisorAdapterRegistry;

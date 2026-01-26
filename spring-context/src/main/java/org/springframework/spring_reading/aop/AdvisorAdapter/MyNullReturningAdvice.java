@@ -1,4 +1,4 @@
-package org.springframework.spring_reading.AdvisorAdapter;
+package org.springframework.spring_reading.aop.AdvisorAdapter;
 
 import java.lang.reflect.Method;
 

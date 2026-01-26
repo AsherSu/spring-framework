@@ -17,11 +17,13 @@
 package org.springframework.aop;
 
 /**
- * Core Spring pointcut abstraction.
+ * Spring 切点（Pointcut）的核心抽象接口。
  *
- * <p>A pointcut is composed of a {@link ClassFilter} and a {@link MethodMatcher}.
- * Both these basic terms and a Pointcut itself can be combined to build up combinations
- * (for example, through {@link org.springframework.aop.support.ComposablePointcut}).
+ * <p>一个 Pointcut 由两部分组成：
+ * 1. {@link ClassFilter}：用于过滤类。
+ * 2. {@link MethodMatcher}：用于过滤方法。
+ * * <p>这两个基础组件以及 Pointcut 本身都可以组合使用
+ * （例如，通过 {@link org.springframework.aop.support.ComposablePointcut} 进行组合）。
  *
  * @author Rod Johnson
  * @see ClassFilter
@@ -33,20 +35,29 @@ package org.springframework.aop;
 public interface Pointcut {
 
 	/**
-	 * Return the ClassFilter for this pointcut.
-	 * @return the ClassFilter (never {@code null})
+	 * 返回此切点的类过滤器（ClassFilter）。
+	 * <p>作用：在方法匹配之前，先对目标类进行粗粒度的筛选。
+	 * 如果 ClassFilter 的 {@code matches(Class)} 方法返回 false，
+	 * 则该切点完全不适用于该类，Spring 将跳过后续的方法匹配检查（性能优化关键）。
+	 *
+	 * @return ClassFilter 对象 (绝不为 {@code null})
 	 */
 	ClassFilter getClassFilter();
 
 	/**
-	 * Return the MethodMatcher for this pointcut.
-	 * @return the MethodMatcher (never {@code null})
+	 * 返回此切点的方法匹配器（MethodMatcher）。
+	 * <p>作用：在 ClassFilter 匹配通过后，对类中的具体方法进行细粒度的筛选。
+	 * 它决定了具体的某个方法执行时，是否应用增强（Advice）。
+	 *
+	 * @return MethodMatcher 对象 (绝不为 {@code null})
 	 */
 	MethodMatcher getMethodMatcher();
 
 
 	/**
-	 * Canonical Pointcut instance that always matches.
+	 * 一个总是匹配的规范 Pointcut 实例（单例）。
+	 * <p>它的 ClassFilter 匹配所有类，MethodMatcher 匹配所有方法。
+	 * 通常用于默认场景或者总是需要增强的场景。
 	 */
 	Pointcut TRUE = TruePointcut.INSTANCE;
 

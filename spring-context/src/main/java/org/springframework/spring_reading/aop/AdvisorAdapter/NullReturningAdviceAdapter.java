@@ -1,4 +1,4 @@
-package org.springframework.spring_reading.AdvisorAdapter;
+package org.springframework.spring_reading.aop.AdvisorAdapter;
 
 import org.aopalliance.aop.Advice;
 import org.aopalliance.intercept.MethodInterceptor;

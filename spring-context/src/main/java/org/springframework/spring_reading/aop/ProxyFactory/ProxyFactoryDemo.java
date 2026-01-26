@@ -1,7 +1,7 @@
 package org.springframework.spring_reading.aop.ProxyFactory;
 
 import org.springframework.aop.framework.ProxyFactory;
-import org.springframework.spring_reading.AdvisorChainFactory.MyMethodBeforeAdvice;
+import org.springframework.spring_reading.aop.AdvisorChainFactory.MyMethodBeforeAdvice;
 
 // 手动创建代理对象
 // 自定义指定 targetSource对象的interfaces 设置 由advisorChainFactory解析advisors出来的MethodInterceptor链条

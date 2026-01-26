@@ -44,7 +44,7 @@ public class BeanFactoryAdvisorRetrievalHelper {
 
 	private final ConfigurableListableBeanFactory beanFactory;
 
-	private volatile String @Nullable [] cachedAdvisorBeanNames;
+	private volatile String @Nullable [] cachedAdvisorBeanNames; // 缓存 Advisor Bean 名称的实例变量
 
 
 	/**

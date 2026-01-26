@@ -1,4 +1,4 @@
-package org.springframework.spring_reading.AdvisorChainFactory;
+package org.springframework.spring_reading.aop.AdvisorChainFactory;
 
 public class MyService {
 
