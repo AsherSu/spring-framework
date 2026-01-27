@@ -6,6 +6,7 @@ import org.springframework.aop.framework.DefaultAdvisorChainFactory;
 import java.lang.reflect.Method;
 import java.util.List;
 
+// @Aspect -> advice -> Interceptor
 public class AdvisorChainFactoryDemo {
 
 	public static void main(String[] args) throws NoSuchMethodException {
