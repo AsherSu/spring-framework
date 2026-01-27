@@ -59,6 +59,8 @@ import org.springframework.core.BridgeMethodResolver;
  * @see #setUserAttribute
  * @see #getUserAttribute
  */
+
+// 组合多个拦截器成链
 public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Cloneable {
 
 	protected final Object proxy;

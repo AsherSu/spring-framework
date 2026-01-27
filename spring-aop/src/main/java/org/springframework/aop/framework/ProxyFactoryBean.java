@@ -234,15 +234,14 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 
 
 	/**
-	 * Return a proxy. Invoked when clients obtain beans from this factory bean.
-	 * Create an instance of the AOP proxy to be returned by this factory.
-	 * The instance will be cached for a singleton, and create on each call to
-	 * {@code getObject()} for a proxy.
-	 * @return a fresh AOP proxy reflecting the current state of this factory
+	 * 返回一个代理对象，当用户从 FactoryBean 中获取 bean 时调用，
+	 * 创建此工厂要返回的 AOP 代理的实例，该实例将作为一个单例被缓存
 	 */
 	@Override
 	public @Nullable Object getObject() throws BeansException {
+		// 初始化通知器链
 		initializeAdvisorChain();
+		// 这里对 Singleton 和 prototype 的类型进行区分，生成对应的 proxy
 		if (isSingleton()) {
 			return getSingletonInstance();
 		}
@@ -301,15 +300,16 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 		if (this.singletonInstance == null) {
 			this.targetSource = freshTargetSource();
 			if (this.autodetectInterfaces && getProxiedInterfaces().length == 0 && !isProxyTargetClass()) {
-				// Rely on AOP infrastructure to tell us what interfaces to proxy.
+				// 根据 AOP 框架来判断需要代理的接口
 				Class<?> targetClass = getTargetClass();
 				if (targetClass == null) {
 					throw new FactoryBeanNotInitializedException("Cannot determine target class for proxy");
 				}
+				// 设置代理对象的接口
 				setInterfaces(ClassUtils.getAllInterfacesForClass(targetClass, this.proxyClassLoader));
 			}
-			// Initialize the shared singleton instance.
 			super.setFrozen(this.freezeProxy);
+			// 这里会通过 AopProxy 来得到代理对象
 			this.singletonInstance = getProxy(createAopProxy());
 		}
 		return this.singletonInstance;
@@ -400,10 +400,7 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 	}
 
 	/**
-	 * Create the advisor (interceptor) chain. Advisors that are sourced
-	 * from a BeanFactory will be refreshed each time a new prototype instance
-	 * is added. Interceptors added programmatically through the factory API
-	 * are unaffected by such changes.
+	 * 初始化 Advisor 链，可以发现，其中有通过对 IoC 容器的 getBean() 方法的调用来获取配置好的 advisor 通知器
 	 */
 	private synchronized void initializeAdvisorChain() throws AopConfigException, BeansException {
 		if (!this.advisorChainInitialized && !ObjectUtils.isEmpty(this.interceptorNames)) {
@@ -418,7 +415,10 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 				throw new AopConfigException("Target required after globals");
 			}
 
-			// Materialize interceptor chain from bean names.
+			// 这里添加了 Advisor 链的调用，下面的 interceptorNames 是在配置文件中
+			// 通过 interceptorNames 进行配置的。由于每一个 Advisor 都是被配置为 bean 的，
+			// 所以通过遍历 interceptorNames 得到的 name，其实就是 bean 的 id，通过这个 name（id）
+			// 我们就可以从 IoC 容器中获取对应的实例化 bean
 			for (String name : this.interceptorNames) {
 				if (name.endsWith(GLOBAL_SUFFIX)) {
 					if (!(this.beanFactory instanceof ListableBeanFactory lbf)) {

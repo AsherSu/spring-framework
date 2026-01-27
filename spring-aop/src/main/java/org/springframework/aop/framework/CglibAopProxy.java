@@ -689,13 +689,17 @@ class CglibAopProxy implements AopProxy, Serializable {
 
 		@Override
 		public @Nullable Object intercept(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+			// 保存旧代理对象
 			Object oldProxy = null;
+			// 是否设置了代理上下文
 			boolean setProxyContext = false;
+			// 目标对象
 			Object target = null;
+			// 获取目标源
 			TargetSource targetSource = this.advised.getTargetSource();
 			try {
 				if (this.advised.isExposeProxy()) {
-					// Make invocation available if necessary.
+					// 如果配置中允许暴露代理对象，则将当前代理对象设置为Aop上下文的当前代理对象
 					oldProxy = AopContext.setCurrentProxy(proxy);
 					setProxyContext = true;
 				}
@@ -722,11 +726,12 @@ class CglibAopProxy implements AopProxy, Serializable {
 			}
 			finally {
 				if (target != null && !targetSource.isStatic()) {
+					// 如果目标对象不是静态的，则释放目标对象
 					targetSource.releaseTarget(target);
 				}
 				if (setProxyContext) {
-					// Restore old proxy.
-					AopContext.setCurrentProxy(oldProxy);
+					// 恢复旧代理对象。
+					AopContext.setCurrentProxy(oldProxy); // 恢复Aop上下文的当前代理对象为旧代理对象
 				}
 			}
 		}

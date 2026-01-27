@@ -538,33 +538,55 @@ public class AdvisedSupport extends ProxyConfig implements Advised {
 
 
 	/**
-	 * Determine a list of {@link org.aopalliance.intercept.MethodInterceptor} objects
-	 * for the given method, based on this configuration.
-	 * @param method the proxied method
-	 * @param targetClass the target class
-	 * @return a List of MethodInterceptors (may also include InterceptorAndDynamicMethodMatchers)
+	 * 根据当前的配置，确定指定方法的 {@link org.aopalliance.intercept.MethodInterceptor} 对象列表。
+	 *
+	 * @param method 被代理的方法
+	 * @param targetClass 目标类
+	 * @return MethodInterceptors 的列表 (也可能包含 InterceptorAndDynamicMethodMatchers)
 	 */
 	public List<Object> getInterceptorsAndDynamicInterceptionAdvice(Method method, @Nullable Class<?> targetClass) {
+		// 定义一个变量来保存最终的拦截器列表
 		List<Object> cachedInterceptors;
+
+		// 分支 1：检查是否定义了 methodCache（方法级缓存）。
+		// methodCache 不为空，通常意味着配置中存在针对特定方法（Method-specific）的切点（Pointcuts），
+		// 或者 Advisor 链是不固定的，因此需要对每个方法单独缓存。
 		if (this.methodCache != null) {
-			// Method-specific cache for method-specific pointcuts
+			// 1.1 生成缓存 Key：基于当前方法对象生成一个唯一的键
 			MethodCacheKey cacheKey = new MethodCacheKey(method);
+
+			// 1.2 尝试从缓存 Map 中获取该方法的拦截器链
 			cachedInterceptors = this.methodCache.get(cacheKey);
+
+			// 1.3 缓存未命中（Cache Miss）
 			if (cachedInterceptors == null) {
+				// 调用工厂类 (AdvisorChainFactory) 解析并获取该方法适用的所有拦截器和动态通知
 				cachedInterceptors = this.advisorChainFactory.getInterceptorsAndDynamicInterceptionAdvice(
 						this, method, targetClass);
+
+				// 将计算结果存入 methodCache，以便下次直接使用
 				this.methodCache.put(cacheKey, cachedInterceptors);
 			}
 		}
+		// 分支 2：没有 methodCache。
+		// 这通常意味着所有 Advisor 都是通用的（针对整个类），不涉及特定方法的匹配逻辑，
+		// 因此所有方法可以共享同一个拦截器链，无需用 Map 区分。
 		else {
-			// Shared cache since there are no method-specific advisors (see below).
+			// 2.1 尝试直接获取共享的缓存列表
 			cachedInterceptors = this.cachedInterceptors;
+
+			// 2.2 缓存未命中
 			if (cachedInterceptors == null) {
+				// 调用工厂类计算拦截器链
 				cachedInterceptors = this.advisorChainFactory.getInterceptorsAndDynamicInterceptionAdvice(
 						this, method, targetClass);
+
+				// 将结果保存到实例变量 cachedInterceptors 中，供后续所有方法调用复用
 				this.cachedInterceptors = cachedInterceptors;
 			}
 		}
+
+		// 返回最终的拦截器链
 		return cachedInterceptors;
 	}
 

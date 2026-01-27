@@ -58,7 +58,9 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 
 	@Override
 	public AopProxy createAopProxy(AdvisedSupport config) throws AopConfigException {
-		// 检查是否支持CGLIB代理，如果是，则创建CGLIB代理
+		// AopProxy 代理对象的生成过程：
+		// 首先从 AdvisedSupport 对象中获取配置的 target 目标对象的类型 targetClass，
+		// 然后根据 targetClass 是否为接口采取不同的生成代理对象的策略
 		if (config.isOptimize() || config.isProxyTargetClass() || !config.hasUserSuppliedInterfaces()) {
 			// 获取目标类
 			Class<?> targetClass = config.getTargetClass();
